@@ -84,6 +84,10 @@ const CATALOG = {
       { id:'ft3', label:'Beyaz Gömlek & Kravat', isImg:true, src:'components/furkan_shirt_business.png', thumbFn:()=>`<img src="components/furkan_shirt_business.png">` },
       { id:'ft4', label:'Gri Takım', isImg:true, src:'components/furkan_suit_grey.png', thumbFn:()=>`<img src="components/furkan_suit_grey.png">` },
       { id:'ft5', label:'Turkuaz Blazer', isImg:true, src:'components/furkan_suit_teal.png', thumbFn:()=>`<img src="components/furkan_suit_teal.png">` },
+      { id:'ft6', label:'Beyaz Tişört', isImg:true, src:'components/furkan_top_tshirt_white.png', thumbFn:()=>`<img src="components/furkan_top_tshirt_white.png">` },
+      { id:'ft7', label:'Gri Kapüşonlu', isImg:true, src:'components/furkan_top_hoodie_grey.png', thumbFn:()=>`<img src="components/furkan_top_hoodie_grey.png">` },
+      { id:'ft8', label:'Lacivert Polo', isImg:true, src:'components/furkan_top_polo_navy.png', thumbFn:()=>`<img src="components/furkan_top_polo_navy.png">` },
+      { id:'ft9', label:'Bordo Kazak', isImg:true, src:'components/furkan_top_sweater_burgundy.png', thumbFn:()=>`<img src="components/furkan_top_sweater_burgundy.png">` },
     ],
     bottom: [
       { id:'fb1', label:'Lacivert Pantolon', isImg:true, src:'components/furkan_bottom_navy_trousers.png', thumbFn:()=>`<img src="components/furkan_bottom_navy_trousers.png">` },
@@ -91,6 +95,9 @@ const CATALOG = {
       { id:'fb3', label:'Bej Chino', isImg:true, src:'components/furkan_bottom_beige_chino.png', thumbFn:()=>`<img src="components/furkan_bottom_beige_chino.png">` },
       { id:'fb4', label:'Siyah Jogger', isImg:true, src:'components/furkan_bottom_black_jogger.png', thumbFn:()=>`<img src="components/furkan_bottom_black_jogger.png">` },
       { id:'fb5', label:'Haki Şort', isImg:true, src:'components/furkan_bottom_khaki_shorts.png', thumbFn:()=>`<img src="components/furkan_bottom_khaki_shorts.png">` },
+      { id:'fb6', label:'Haki Kargo Pantolon', isImg:true, src:'components/furkan_bottom_olive_cargo.png', thumbFn:()=>`<img src="components/furkan_bottom_olive_cargo.png">` },
+      { id:'fb7', label:'Gri Eşofman Altı', isImg:true, src:'components/furkan_bottom_grey_sweatpants.png', thumbFn:()=>`<img src="components/furkan_bottom_grey_sweatpants.png">` },
+      { id:'fb8', label:'Mavi Kot Şort', isImg:true, src:'components/furkan_bottom_blue_denim_shorts.png', thumbFn:()=>`<img src="components/furkan_bottom_blue_denim_shorts.png">` },
     ],
     shoes: [
       { id:'fs1', label:'Beyaz Sneaker', isImg:true, src:'components/furkan_shoes_sneaker_white.png', thumbFn:()=>`<img src="components/furkan_shoes_sneaker_white.png">` },

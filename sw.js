@@ -4,7 +4,7 @@
    iPhone with Wi-Fi off. Bump CACHE_VERSION whenever files change so
    returning visitors pick up the update instead of a stale cache. */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = 'diva-dress-makeup-' + CACHE_VERSION;
 
 const CORE_ASSETS = [
@@ -36,6 +36,9 @@ const COMPONENT_ASSETS = [
   'components/furkan_bottom_blue_jeans.png',
   'components/furkan_bottom_khaki_shorts.png',
   'components/furkan_bottom_navy_trousers.png',
+  'components/furkan_bottom_olive_cargo.png',
+  'components/furkan_bottom_grey_sweatpants.png',
+  'components/furkan_bottom_blue_denim_shorts.png',
   'components/furkan_hair_1.png',
   'components/furkan_hair_2.png',
   'components/furkan_hair_3.png',
@@ -69,6 +72,10 @@ const COMPONENT_ASSETS = [
   'components/furkan_top_3.png',
   'components/furkan_top_4.png',
   'components/furkan_top_5.png',
+  'components/furkan_top_tshirt_white.png',
+  'components/furkan_top_hoodie_grey.png',
+  'components/furkan_top_polo_navy.png',
+  'components/furkan_top_sweater_burgundy.png',
   'components/nisa_accessory_necklace.png',
   'components/nisa_accessory_sunglasses.png',
   'components/nisa_accessory_tiara.png',
