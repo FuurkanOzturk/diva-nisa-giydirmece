@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="Diva Dress & Makeup - Nisa ve Furkan Giydirme Oyunu" />
+  <title>✨ Diva Dress & Makeup – Nisa & Furkan</title>
+
+  <!-- PWA / offline support: lets the game be added to the iPhone home
+       screen and keeps working with Wi-Fi off after the first visit,
+       once everything has been cached by sw.js. -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#e91e8c" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Diva D&M" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink-deep:   #e91e8c;
+      --pink-main:   #f06292;
+      --pink-light:  #f8bbd0;
+      --pink-pale:   #fce4ec;
+      --furkan-blue: #42a5f5;
+      --furkan-dark: #1565c0;
+      --furkan-pale: #e3f2fd;
+      --gold:        #ffd54f;
+      --text-dark:   #4a0e2e;
+      --text-furkan: #0d2e4a;
+      --radius-lg:   22px;
+      --radius-md:   14px;
+      --shadow-card: 0 6px 20px rgba(233,30,140,0.2);
+      --shadow-furkan:0 6px 20px rgba(66,165,245,0.2);
+      --transition:  0.22s cubic-bezier(.4,0,.2,1);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top:    env(safe-area-inset-top, 0px);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #121212;
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 0 50px rgba(0,0,0,0.25);
+    }
+
+    /* HEADER */
+    #header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 8px;
+      background: linear-gradient(135deg, #ff4081 0%, #f06292 50%, #ba68c8 100%);
+      box-shadow: 0 2px 14px rgba(233,30,140,0.3);
+      z-index: 100;
+    }
+    #app.furkan-mode #header {
+      background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 50%, #26c6da 100%);
+      box-shadow: 0 2px 14px rgba(30,136,229,0.3);
+    }
+    #header h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.2px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #char-switch {
+      display: flex;
+      background: rgba(255,255,255,0.25);
+      border-radius: 50px;
+      padding: 3px;
+      gap: 2px;
+      backdrop-filter: blur(4px);
+    }
+    .char-btn {
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.9);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: var(--transition);
+      -webkit-tap-highlight-color: transparent;
+      min-height: 28px;
+    }
+    .char-btn.active {
+      background: #fff;
+      color: var(--pink-deep);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.16);
+    }
+    #app.furkan-mode .char-btn.active { color: var(--furkan-dark); }
+
+    .admin-link-btn {
+      background: rgba(255,255,255,0.9);
+      color: var(--pink-deep);
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 5px 10px;
+      border-radius: 50px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: var(--transition);
+    }
+    .admin-link-btn:hover { transform: scale(1.05); }
+    #app.furkan-mode .admin-link-btn { color: var(--furkan-dark); }
+
+    /* STAGE (flexible — fills remaining space above inventory, minus header/toolbar) */
+    #stage {
+      flex: 1 1 auto;
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #stage-bg {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, #fff 0%, #fce4ec 55%, #f8bbd0 100%);
+      transition: background 0.4s ease;
+    }
+    #app.furkan-mode #stage-bg {
+      background: radial-gradient(circle at 50% 30%, #fff 0%, #e3f2fd 55%, #bbdefb 100%);
+    }
+
+    /* Standard Doll Stage Box: Exact 320x520 to match Admin 1:1 */
+    #stage-box {
+      position: relative;
+      width: 320px;
+      height: 520px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .base-doll-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Standard Component Overlay Layer (100% of stage box) */
+    .comp-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .comp-layer img, .comp-layer svg {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Custom Item Container: Uses Exact Same Parent-Relative CSS as Admin */
+    .custom-rendered-item {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      transform-origin: center center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .custom-rendered-item img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* INVENTORY (45%) */
+    #inventory {
+      flex: 0 0 45%;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      box-shadow: 0 -6px 28px rgba(0,0,0,0.09);
+      overflow: hidden;
+      z-index: 50;
+      padding-bottom: var(--safe-bottom);
+    }
+
+    #tab-bar {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border-bottom: 2px solid var(--pink-pale);
+      background: #fff;
+      flex-shrink: 0;
+      padding: 0 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    #tab-bar::-webkit-scrollbar { display: none; }
+    #app.furkan-mode #tab-bar { border-bottom-color: var(--furkan-pale); }
+
+    .tab-btn {
+      flex: 0 0 auto;
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 8px 12px 6px;
+      cursor: pointer;
+      color: #9e9e9e;
+      font-size: 11px;
+      font-weight: 700;
+      transition: var(--transition);
+      -webkit-tap-highlight-color: transparent;
+      min-width: 58px;
+      min-height: 50px;
+      position: relative;
+    }
+    .tab-btn .tab-icon { font-size: 19px; line-height: 1; }
+    .tab-btn::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 3px;
+      border-radius: 3px 3px 0 0;
+      background: var(--pink-deep);
+      transition: var(--transition);
+    }
+    .tab-btn.active { color: var(--pink-deep); }
+    .tab-btn.active::after { width: 65%; }
+    #app.furkan-mode .tab-btn.active { color: var(--furkan-dark); }
+    #app.furkan-mode .tab-btn.active::after { background: var(--furkan-dark); }
+
+    #sub-bar {
+      display: none;
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: #fafafa;
+      padding: 6px 12px;
+      gap: 8px;
+      border-bottom: 1px solid #f0f0f0;
+      flex-shrink: 0;
+    }
+    #sub-bar::-webkit-scrollbar { display: none; }
+    .sub-pill {
+      border: 1px solid #e0e0e0;
+      background: #fff;
+      color: #616161;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 50px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sub-pill.active {
+      background: var(--pink-main);
+      color: #fff;
+      border-color: var(--pink-main);
+      box-shadow: 0 2px 6px rgba(240,98,146,0.3);
+    }
+    #app.furkan-mode .sub-pill.active {
+      background: var(--furkan-blue);
+      border-color: var(--furkan-blue);
+      box-shadow: 0 2px 6px rgba(66,165,245,0.3);
+    }
+
+    #item-grid {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 12px 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      align-content: start;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: var(--pink-light) transparent;
+    }
+    #item-grid::-webkit-scrollbar { width: 4px; }
+    #item-grid::-webkit-scrollbar-thumb { background: var(--pink-light); border-radius: 4px; }
+
+    .item-card {
+      border: 2px solid var(--pink-pale);
+      border-radius: var(--radius-md);
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 4px;
+      cursor: pointer;
+      transition: var(--transition);
+      -webkit-tap-highlight-color: transparent;
+      min-height: 86px;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      position: relative;
+      overflow: hidden;
+    }
+    .item-card:active { transform: scale(0.94); }
+    .item-card .thumb-box {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .item-card img { width: 100%; height: 100%; object-fit: contain; }
+    .item-card svg { width: 100%; height: 100%; object-fit: contain; }
+    .item-card .color-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    .item-card .item-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #424242;
+      text-align: center;
+      line-height: 1.15;
+    }
+    .item-card.equipped {
+      border-color: var(--pink-deep);
+      background: var(--pink-pale);
+      box-shadow: 0 0 0 3px rgba(233,30,140,0.18), var(--shadow-card);
+    }
+    .item-card.equipped::after {
+      content: '✓';
+      position: absolute;
+      top: 3px; right: 4px;
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--pink-deep);
+      background: rgba(255,255,255,0.95);
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    #app.furkan-mode .item-card { border-color: var(--furkan-pale); }
+    #app.furkan-mode .item-card.equipped {
+      border-color: var(--furkan-blue);
+      background: var(--furkan-pale);
+      box-shadow: 0 0 0 3px rgba(66,165,245,0.18), var(--shadow-furkan);
+    }
+    #app.furkan-mode .item-card.equipped::after { color: var(--furkan-dark); }
+
+    @keyframes wearPop {
+      0%   { transform: scale(0.95); opacity: 0.7; }
+      60%  { transform: scale(1.02); opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    .wear-anim { animation: wearPop 0.3s ease forwards; }
+
+    #reset-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      z-index: 200;
+      border: none;
+      background: rgba(255,255,255,0.92);
+      color: var(--pink-deep);
+      border-radius: 50px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      -webkit-tap-highlight-color: transparent;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #reset-btn:active { transform: scale(0.92); }
+    #app.furkan-mode #reset-btn { color: var(--furkan-dark); }
+  </style>
+</head>
+<body>
+
+  <!-- START SCREEN STYLES -->
+  <style>
+    #start-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: linear-gradient(-45deg, #ff4081, #f06292, #ba68c8, #42a5f5);
+      background-size: 400% 400%;
+      animation: gradientBG 10s ease infinite;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+      overflow: hidden;
+    }
+    /* Sparkles */
+    .sparkle {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: twinkle linear infinite;
+    }
+    @keyframes twinkle {
+      0% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0); }
+    }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .start-title {
+      font-size: 38px;
+      font-weight: 900;
+      margin-bottom: 12px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      letter-spacing: 0.5px;
+      animation: popIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 2;
+    }
+    .start-subtitle {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 55px;
+      background: rgba(0,0,0,0.2);
+      padding: 10px 30px;
+      border-radius: 50px;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255,255,255,0.3);
+      animation: fadeIn 1.5s ease;
+      z-index: 2;
+    }
+    .heart-icon {
+      display: inline-block;
+      color: #ff1744;
+      animation: heartbeat 1.2s infinite;
+      margin: 0 4px;
+    }
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      15% { transform: scale(1.35); }
+      30% { transform: scale(1); }
+      45% { transform: scale(1.35); }
+      60% { transform: scale(1); }
+      100% { transform: scale(1); }
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .start-btn {
+      background: #fff;
+      color: #e91e8c;
+      border: none;
+      padding: 18px 48px;
+      font-size: 22px;
+      font-weight: 800;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      transition: all 0.3s ease;
+      animation: floatBtn 3s ease-in-out infinite;
+      z-index: 2;
+    }
+    .start-btn:hover {
+      transform: scale(1.08) translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+      color: #f06292;
+    }
+    .start-btn:active {
+      transform: scale(0.95);
+    }
+    @keyframes floatBtn {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    .start-hidden {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none;
+    }
+
+    /* ---- START SCREEN: secondary menu row ---- */
+    .start-menu-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 22px;
+      z-index: 2;
+    }
+    .start-menu-btn {
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.45);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 16px;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: var(--transition, 0.2s ease);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .start-menu-btn:active { transform: scale(0.93); }
+    .start-menu-btn:hover { background: rgba(255,255,255,0.34); }
+
+    .start-preview-row {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 26px;
+      z-index: 2;
+      animation: fadeIn 1.8s ease;
+    }
+    .start-preview-doll {
+      width: 74px; height: 74px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+      border: 3px solid rgba(255,255,255,0.8);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .start-preview-doll img {
+      width: 130%; height: 130%; object-fit: contain; object-position: 50% 15%;
+    }
+    .start-preview-label {
+      position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+      font-size: 10px; font-weight: 800; color: #fff; white-space: nowrap;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    /* ---- GENERIC MODAL SYSTEM ---- */
+    #modal-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(30,10,25,0.55);
+      backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.25s ease, visibility 0.25s;
+      padding: 20px;
+    }
+    #modal-overlay.open { opacity: 1; visibility: visible; pointer-events: auto; }
+    #modal-card {
+      background: #fff;
+      border-radius: 24px;
+      max-width: 400px; width: 100%;
+      max-height: 86vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+      transform: scale(0.9) translateY(10px);
+      transition: transform 0.28s cubic-bezier(.34,1.56,.64,1);
+      position: relative;
+    }
+    #modal-overlay.open #modal-card { transform: scale(1) translateY(0); }
+    .modal-header {
+      background: linear-gradient(135deg, #ff4081 0%, #f06292 50%, #ba68c8 100%);
+      color: #fff;
+      padding: 18px 20px 16px;
+      font-size: 17px;
+      font-weight: 900;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 2;
+    }
+    #app.furkan-mode ~ #modal-overlay .modal-header,
+    body.furkan-modal .modal-header {
+      background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 50%, #26c6da 100%);
+    }
+    .modal-close-btn {
+      background: rgba(255,255,255,0.25);
+      border: none; color: #fff;
+      width: 28px; height: 28px; border-radius: 50%;
+      font-size: 15px; font-weight: 900;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .modal-body { padding: 18px 20px 22px; }
+    .modal-section { margin-bottom: 18px; }
+    .modal-section:last-child { margin-bottom: 0; }
+    .modal-section-title {
+      font-size: 12px; font-weight: 800; color: #9e9e9e;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* Settings rows */
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 13px; font-weight: 700; color: #424242; display:flex; align-items:center; gap:8px; }
+    .settings-row input[type="range"] {
+      width: 120px; accent-color: var(--pink-deep, #e91e8c);
+    }
+    .toggle-switch {
+      width: 44px; height: 26px; border-radius: 50px;
+      background: #e0e0e0; position: relative; cursor: pointer;
+      transition: background 0.2s ease; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent; border: none;
+    }
+    .toggle-switch::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; border-radius: 50%; background: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      transition: transform 0.22s cubic-bezier(.34,1.56,.64,1);
+    }
+    .toggle-switch.on { background: var(--pink-deep, #e91e8c); }
+    .toggle-switch.on::after { transform: translateX(18px); }
+
+    .modal-action-btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition, 0.2s ease);
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .modal-action-btn.primary { background: var(--pink-deep, #e91e8c); color: #fff; }
+    .modal-action-btn.danger { background: #ffebee; color: #c62828; }
+    .modal-action-btn:active { transform: scale(0.97); }
+    .credits-text { font-size: 11.5px; color: #9e9e9e; line-height: 1.6; }
+
+    /* How-to-play */
+    .howto-step {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid #f5f5f5;
+    }
+    .howto-step:last-child { border-bottom: none; }
+    .howto-num {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+      background: var(--pink-pale, #fce4ec); color: var(--pink-deep, #e91e8c);
+      font-weight: 900; font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .howto-text { font-size: 12.5px; color: #424242; line-height: 1.5; padding-top: 3px; }
+
+    /* Gallery */
+    #gallery-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .gallery-empty {
+      text-align: center; padding: 30px 10px; color: #bdbdbd; font-size: 12.5px;
+    }
+    .gallery-card {
+      border: 2px solid var(--pink-pale, #fce4ec);
+      border-radius: 14px; overflow: hidden; cursor: pointer;
+      background: #fafafa; position: relative;
+      transition: var(--transition, 0.2s ease);
+    }
+    .gallery-card:active { transform: scale(0.95); }
+    .gallery-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+    .gallery-card .gallery-name {
+      font-size: 9.5px; font-weight: 700; color: #616161; text-align: center;
+      padding: 4px 3px; background: #fff;
+    }
+    .gallery-card .gallery-del {
+      position: absolute; top: 3px; right: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(0,0,0,0.55); color: #fff; border: none;
+      font-size: 10px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .save-look-form { display: flex; gap: 8px; margin-bottom: 14px; }
+    .save-look-form input {
+      flex: 1; border: 1.5px solid #e0e0e0; border-radius: 10px;
+      padding: 9px 12px; font-size: 12.5px; outline: none;
+    }
+    .save-look-form input:focus { border-color: var(--pink-main, #f06292); }
+    .save-look-form button {
+      background: var(--pink-deep, #e91e8c); color: #fff; border: none;
+      padding: 0 16px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer;
+    }
+
+    /* Photo preview modal */
+    #photo-canvas-wrap {
+      display: flex; align-items: center; justify-content: center;
+      background: #fafafa; border-radius: 16px; padding: 10px; margin-bottom: 14px;
+    }
+    #photo-canvas-wrap canvas { max-width: 100%; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
+
+    /* Achievements list */
+    .badge-row {
+      display: flex; align-items: center; gap: 12px; padding: 9px 0;
+      border-bottom: 1px solid #f5f5f5;
+      opacity: 0.4; filter: grayscale(1);
+    }
+    .badge-row.unlocked { opacity: 1; filter: none; }
+    .badge-row:last-child { border-bottom: none; }
+    .badge-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--pink-pale, #fce4ec);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .badge-info .badge-name { font-size: 12.5px; font-weight: 800; color: #424242; }
+    .badge-info .badge-desc { font-size: 10.5px; color: #9e9e9e; margin-top: 1px; }
+
+    /* ---- TOOLBAR (under header) ---- */
+    #toolbar {
+      flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 12px;
+      background: #fff;
+      border-bottom: 1px solid #f5f5f5;
+      gap: 8px;
+      z-index: 90;
+    }
+    .toolbar-group { display: flex; gap: 6px; align-items: center; }
+    .toolbar-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: var(--pink-pale, #fce4ec); color: var(--pink-deep, #e91e8c);
+      font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: var(--transition, 0.2s ease);
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+    }
+    .toolbar-btn:active { transform: scale(0.88); }
+    #app.furkan-mode .toolbar-btn { background: var(--furkan-pale, #e3f2fd); color: var(--furkan-dark, #0d2e4a); }
+    .toolbar-btn.wide {
+      width: auto; border-radius: 50px; padding: 0 12px; gap: 5px; font-size: 11px; font-weight: 800;
+    }
+    #style-score-pill {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--pink-pale, #fce4ec); color: var(--pink-deep, #e91e8c);
+      border-radius: 50px; padding: 5px 11px; font-size: 11px; font-weight: 800;
+      cursor: pointer; border: none;
+    }
+    #app.furkan-mode #style-score-pill { background: var(--furkan-pale, #e3f2fd); color: var(--furkan-dark, #0d2e4a); }
+
+    /* ---- SCENE PICKER ---- */
+    #scene-picker {
+      position: absolute;
+      bottom: 8px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px;
+      background: rgba(255,255,255,0.75);
+      backdrop-filter: blur(6px);
+      padding: 5px; border-radius: 50px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      z-index: 20;
+    }
+    .scene-dot {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.9);
+      cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      transition: var(--transition, 0.2s ease);
+      flex-shrink: 0;
+    }
+    .scene-dot.active { border-color: var(--pink-deep, #e91e8c); transform: scale(1.18); }
+
+    /* ---- ACHIEVEMENT TOAST ---- */
+    #toast-stack {
+      position: absolute; top: calc(14px + var(--safe-top, 0px)); left: 50%;
+      transform: translateX(-50%);
+      z-index: 10500;
+      display: flex; flex-direction: column; gap: 8px;
+      pointer-events: none;
+      width: 90%; max-width: 340px;
+    }
+    .toast {
+      background: rgba(30,20,25,0.92);
+      color: #fff; border-radius: 50px;
+      padding: 10px 18px;
+      font-size: 12.5px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      animation: toastIn 0.4s cubic-bezier(.34,1.56,.64,1), toastOut 0.4s ease 2.6s forwards;
+    }
+    @keyframes toastIn { 0% { opacity:0; transform: translateY(-16px) scale(0.9); } 100% { opacity:1; transform: translateY(0) scale(1); } }
+    @keyframes toastOut { 0% { opacity:1; } 100% { opacity:0; transform: translateY(-10px); } }
+
+    /* ---- CONFETTI CANVAS ---- */
+    #confetti-canvas {
+      position: absolute; inset: 0; z-index: 10400;
+      pointer-events: none;
+      width: 100%; height: 100%;
+    }
+
+    /* Style meter under stage */
+    #style-meter-wrap {
+      position: absolute; top: 8px; left: 8px; right: 8px;
+      z-index: 20; display: flex; align-items: center; gap: 6px;
+    }
+    #style-meter-track {
+      flex: 1; height: 6px; background: rgba(255,255,255,0.6);
+      border-radius: 4px; overflow: hidden;
+    }
+    #style-meter-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--pink-main,#f06292), var(--gold,#ffd54f));
+      border-radius: 4px; transition: width 0.4s cubic-bezier(.4,0,.2,1);
+    }
+    #style-meter-label { font-size: 9.5px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.3); white-space: nowrap; }
+  </style>
+
+  <!-- START SCREEN UI -->
+  <div id="start-screen">
+    <!-- Generates random background sparkles via inline script later -->
+    <h1 class="start-title">✨ Diva Dress & Makeup ✨</h1>
+    <div class="start-subtitle">Nisa <span class="heart-icon">❤️</span> Furkan</div>
+    <div class="start-preview-row">
+      <div class="start-preview-doll"><img src="components/nisa_base.png" alt="Nisa"><span class="start-preview-label">Nisa</span></div>
+      <div class="start-preview-doll"><img src="components/furkan_base.png" alt="Furkan"><span class="start-preview-label">Furkan</span></div>
+    </div>
+    <button class="start-btn" onclick="startGame()">Oyuna Başla</button>
+    <div class="start-menu-row">
+      <button class="start-menu-btn" onclick="openSettings()">⚙️ Ayarlar</button>
+      <button class="start-menu-btn" onclick="openHowTo()">❓ Nasıl Oynanır</button>
+    </div>
+  </div>
+
+  <script>
+    // Create random background sparkles
+    const screen = document.getElementById('start-screen');
+    for(let i=0; i<30; i++) {
+      let spark = document.createElement('div');
+      spark.className = 'sparkle';
+      let size = Math.random() * 4 + 2; // 2px to 6px
+      spark.style.width = size + 'px';
+      spark.style.height = size + 'px';
+      spark.style.left = Math.random() * 100 + '%';
+      spark.style.top = Math.random() * 100 + '%';
+      spark.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+      spark.style.animationDelay = (Math.random() * 2) + 's';
+      screen.appendChild(spark);
+    }
+
+    function startGame() {
+      document.getElementById('start-screen').classList.add('start-hidden');
+      if(typeof beginMusic === 'function') beginMusic();
+    }
+  </script>
+
+<div id="app">
+
+  <header id="header">
+    <h1>✨ Diva Dress & Makeup</h1>
+    <div class="header-right">
+      <a href="admin.html" class="admin-link-btn" title="Kıyafet Ekle ve Düzenle">⚙️ Admin</a>
+      <div id="char-switch">
+        <button class="char-btn active" id="btn-nisa" onclick="switchCharacter('nisa')">Nisa</button>
+        <button class="char-btn" id="btn-furkan" onclick="switchCharacter('furkan')">Furkan</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="toolbar">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="mute-btn" onclick="toggleMute()" title="Sesi Aç/Kapat">🎵</button>
+      <button class="toolbar-btn" onclick="openSettings()" title="Ayarlar">⚙️</button>
+      <button class="toolbar-btn" onclick="openGallery()" title="Kombin Galerim">🖼️</button>
+      <button class="toolbar-btn" onclick="openPhotoModal()" title="Fotoğraf Çek">📸</button>
+    </div>
+    <div class="toolbar-group">
+      <button class="toolbar-btn wide" onclick="randomOutfit()" title="Rastgele Kombin">🎲 Şaşırt</button>
+      <button id="style-score-pill" onclick="openAchievements()" title="Rozetlerim">🏆 <span id="style-score-val">0</span></button>
+    </div>
+  </div>
+
+  <section id="stage">
+    <div id="stage-bg"></div>
+    <div id="style-meter-wrap">
+      <span id="style-meter-label">Stil</span>
+      <div id="style-meter-track"><div id="style-meter-fill"></div></div>
+    </div>
+    <div id="stage-box">
+        <div id="aspect-ratio-canvas" style="position: absolute; top: 50%; left: 50%; width: 100%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%);">
+          <!-- Base & Item layers are dynamically rendered here -->
+        </div>
+      </div>
+    <div id="scene-picker"></div>
+    <button id="reset-btn" onclick="resetOutfit()">🔄 Sıfırla</button>
+  </section>
+
+  <section id="inventory">
+    <div id="tab-bar"></div>
+    <div id="sub-bar"></div>
+    <div id="item-grid"></div>
+  </section>
+
+  <!-- ===== TOASTS + CONFETTI (scoped to the app frame) ===== -->
+  <div id="toast-stack"></div>
+  <canvas id="confetti-canvas"></canvas>
+</div>
+
+<!-- ===== GENERIC MODAL ===== -->
+<div id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div id="modal-card">
+    <div class="modal-header">
+      <span id="modal-title">Başlık</span>
+      <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="catalog.js"></script>
+<script>
+/* CATALOG and Z now live in catalog.js, shared with admin.html, so the two
+   pages can never drift out of sync (see catalog.js header comment). */
+/* (removed — see catalog.js) */
+
+function mergeCustomItems() {
+  try {
+    const customItems = JSON.parse(localStorage.getItem('diva_custom_items') || '[]');
+    customItems.forEach(c => {
+      const ch = c.char || 'nisa';
+      const cat = c.category || 'top';
+      if(!CATALOG[ch]) CATALOG[ch] = {};
+      if(!CATALOG[ch][cat]) CATALOG[ch][cat] = [];
+
+      const existing = CATALOG[ch][cat].findIndex(i => i.id === c.id);
+      const itemObj = {
+        id: c.id,
+        label: c.name + ' ⭐',
+        isImg: true,
+        src: c.src,
+        isCustom: true,
+        x: c.x || 0,
+        y: c.y || 0,
+        scale: c.scale || 65,
+        rotation: c.rotation || 0,
+        thumbFn: () => `<img src="${c.src}">`
+      };
+
+      if(existing >= 0) {
+        CATALOG[ch][cat][existing] = itemObj;
+      } else {
+        CATALOG[ch][cat].unshift(itemObj);
+      }
+    });
+  } catch(e) {
+    console.error('Failed to load custom items', e);
+  }
+}
+
+/* ---- ADMIN POSITION OVERRIDES ----
+   Lets the admin panel nudge/rescale/rotate ANY existing catalog item (not just
+   custom uploads) without touching the underlying image file. Stored per item id
+   as {dx, dy, scale, rot} where dx/dy are % nudge offsets (of the item's own
+   layer box), scale is a multiplier (1 = unchanged), rot is degrees. Items with
+   no saved override render exactly as before (full-canvas fit, zero-cost). */
+const PLACEMENT_KEY = 'diva_placement_overrides_v1';
+let PLACEMENT_OVERRIDES = {};
+
+function loadPlacementOverrides() {
+  try {
+    PLACEMENT_OVERRIDES = JSON.parse(localStorage.getItem(PLACEMENT_KEY) || '{}');
+  } catch(e) {
+    console.error('Failed to load placement overrides', e);
+    PLACEMENT_OVERRIDES = {};
+  }
+}
+
+const TABS = [
+  { id:'hair',       label:'Saç',       icon:'💇' },
+  { id:'top',        label:'Kıyafet',   icon:'👗' },
+  { id:'bottom',     label:'Alt',       icon:'👖' },
+  { id:'shoes',      label:'Ayakkabı',  icon:'👠' },
+  { id:'makeup',     label:'Makyaj',    icon:'💄' },
+  { id:'accessories',label:'Aksesuar',  icon:'👑' },
+];
+
+const MAKEUP_SUBS = [
+  { id:'makeup_lipstick',  label:'💄 Ruj' },
+  { id:'makeup_eyeshadow', label:'✨ Far' },
+  { id:'makeup_blush',     label:'🌸 Allık' },
+  { id:'makeup_eyeliner',  label:'👁️ Liner' },
+];
+
+/* Z now lives in catalog.js, shared with admin.html. */
+
+let gameState = {
+  currentCharacter: 'nisa',
+  activeTab: 'hair',
+  activeMakeupSub: 'makeup_lipstick',
+  equipped: {
+    hair: null, top: null, bottom: null, shoes: null,
+    makeup_lipstick: null, makeup_eyeshadow: null, makeup_blush: null, makeup_eyeliner: null,
+    accessories: null,
+  }
+};
+
+function renderCharacter() {
+  const stageBox = document.getElementById('aspect-ratio-canvas');
+  stageBox.innerHTML = '';
+  const { currentCharacter: ch, equipped } = gameState;
+
+  // Base Doll Layer
+  const baseImg = document.createElement('img');
+  baseImg.className = 'base-doll-img';
+  baseImg.src = ch === 'nisa' ? 'components/nisa_base.png' : 'components/furkan_base.png';
+  baseImg.alt = ch;
+  stageBox.appendChild(baseImg);
+
+  const layerKeys = [
+    'makeup_blush', 'makeup_eyeshadow', 'makeup_eyeliner', 'makeup_lipstick',
+    'bottom', 'shoes', 'top', 'hair', 'accessories'
+  ];
+
+  layerKeys.forEach(cat => {
+    const id = equipped[cat];
+    if(!id) return;
+    const catalogList = CATALOG[ch][cat];
+    if(!catalogList) return;
+    const item = catalogList.find(i => i.id === id);
+    if(!item) return;
+
+    if(item.isCustom) {
+      // EXACT MATCHING PARENT-RELATIVE CSS CONTAINER
+      const holder = document.createElement('div');
+      holder.className = 'custom-rendered-item';
+      holder.id = 'layer-' + cat;
+      holder.style.zIndex = Z[cat];
+      holder.style.left = `calc(50% + ${item.x}%)`;
+      holder.style.top = `calc(50% + ${item.y}%)`;
+      holder.style.width = `${item.scale}%`;
+      holder.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
+      holder.dataset.x = item.x; holder.dataset.y = item.y;
+      holder.dataset.scale = item.scale; holder.dataset.rotation = item.rotation;
+
+      const oImg = document.createElement('img');
+      oImg.src = item.src;
+      holder.appendChild(oImg);
+      stageBox.appendChild(holder);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'comp-layer';
+      div.id = 'layer-' + cat;
+      div.style.zIndex = Z[cat];
+
+      const ov = PLACEMENT_OVERRIDES[item.id];
+      if(ov) {
+        const dx = ov.dx || 0, dy = ov.dy || 0, sc = (ov.scale != null ? ov.scale : 1), rot = ov.rot || 0;
+        div.style.transform = `translate(${dx}%, ${dy}%) scale(${sc}) rotate(${rot}deg)`;
+        div.dataset.ovDx = dx; div.dataset.ovDy = dy;
+        div.dataset.ovScale = sc; div.dataset.ovRot = rot;
+      }
+
+      if(item.isImg) {
+        const oImg = document.createElement('img');
+        oImg.src = item.src;
+        div.appendChild(oImg);
+      } else {
+        div.innerHTML = item.svgFn();
+      }
+      stageBox.appendChild(div);
+    }
+  });
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  TABS.forEach(tab => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (gameState.activeTab === tab.id ? ' active' : '');
+    btn.id = 'tab-' + tab.id;
+    btn.innerHTML = `<span class="tab-icon">${tab.icon}</span><span>${tab.label}</span>`;
+    btn.addEventListener('click', () => selectTab(tab.id));
+    bar.appendChild(btn);
+  });
+}
+
+function renderSubBar() {
+  const subBar = document.getElementById('sub-bar');
+  if(gameState.activeTab === 'makeup') {
+    subBar.style.display = 'flex';
+    subBar.innerHTML = '';
+    const subs = gameState.currentCharacter === 'nisa' ? MAKEUP_SUBS : [{ id:'makeup_blush', label:'🌸 Allık' }];
+    subs.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'sub-pill' + (gameState.activeMakeupSub === s.id ? ' active' : '');
+      btn.textContent = s.label;
+      btn.addEventListener('click', () => {
+        gameState.activeMakeupSub = s.id;
+        renderSubBar();
+        renderGrid();
+      });
+      subBar.appendChild(btn);
+    });
+  } else {
+    subBar.style.display = 'none';
+  }
+}
+
+function renderGrid() {
+  const grid = document.getElementById('item-grid');
+  grid.innerHTML = '';
+  const { currentCharacter: ch, activeTab, activeMakeupSub, equipped } = gameState;
+
+  const currentCategory = activeTab === 'makeup' ? activeMakeupSub : activeTab;
+  const items = CATALOG[ch][currentCategory] || [];
+
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'item-card' + (equipped[currentCategory] === item.id ? ' equipped' : '');
+    card.id = 'item-' + item.id;
+
+    const thumbDiv = document.createElement('div');
+    thumbDiv.className = 'thumb-box';
+
+    if(item.color) {
+      const dot = document.createElement('div');
+      dot.className = 'color-dot';
+      dot.style.background = item.color;
+      thumbDiv.appendChild(dot);
+    } else if(item.thumbFn) {
+      thumbDiv.innerHTML = item.thumbFn();
+    }
+
+    card.appendChild(thumbDiv);
+
+    const lbl = document.createElement('span');
+    lbl.className = 'item-label';
+    lbl.textContent = item.label;
+    card.appendChild(lbl);
+
+    card.addEventListener('click', () => toggleItem(currentCategory, item.id));
+    grid.appendChild(card);
+  });
+}
+
+function selectTab(id) {
+  gameState.activeTab = id;
+  renderTabs();
+  renderSubBar();
+  renderGrid();
+}
+
+function toggleItem(cat, id) {
+  const wasEquipped = gameState.equipped[cat] === id;
+  gameState.equipped[cat] = wasEquipped ? null : id;
+  renderCharacter();
+  const layer = document.getElementById('layer-' + cat);
+  if(layer) {
+    layer.classList.remove('wear-anim');
+    void layer.offsetWidth;
+    layer.classList.add('wear-anim');
+  }
+  renderGrid();
+  if(typeof playSfx === 'function') playSfx(wasEquipped ? 'unequip' : 'equip');
+  if(typeof onOutfitChanged === 'function') onOutfitChanged(cat, id, wasEquipped);
+}
+
+function switchCharacter(ch) {
+  if(gameState.currentCharacter === ch) return;
+  gameState.currentCharacter = ch;
+  gameState.equipped = {
+    hair: null, top: null, bottom: null, shoes: null,
+    makeup_lipstick: null, makeup_eyeshadow: null, makeup_blush: null, makeup_eyeliner: null,
+    accessories: null,
+  };
+  gameState.activeTab = 'hair';
+  gameState.activeMakeupSub = 'makeup_lipstick';
+
+  const app = document.getElementById('app');
+  if(ch === 'furkan') { app.classList.add('furkan-mode'); } else { app.classList.remove('furkan-mode'); }
+
+  document.getElementById('btn-nisa').classList.toggle('active', ch === 'nisa');
+  document.getElementById('btn-furkan').classList.toggle('active', ch === 'furkan');
+
+  renderCharacter();
+  renderTabs();
+  renderSubBar();
+  renderGrid();
+  if(typeof onCharacterSwitched === 'function') onCharacterSwitched(ch);
+  if(typeof playSfx === 'function') playSfx('swoosh');
+}
+
+function resetOutfit() {
+  gameState.equipped = {
+    hair: null, top: null, bottom: null, shoes: null,
+    makeup_lipstick: null, makeup_eyeshadow: null, makeup_blush: null, makeup_eyeliner: null,
+    accessories: null,
+  };
+  renderCharacter();
+  renderGrid();
+  if(typeof onOutfitReset === 'function') onOutfitReset();
+  if(typeof playSfx === 'function') playSfx('unequip');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  mergeCustomItems();
+  loadPlacementOverrides();
+  renderCharacter();
+  renderTabs();
+  renderSubBar();
+  renderGrid();
+  if(typeof initExtras === 'function') initExtras();
+});
+</script>
+
+<script>
+  // Migrate localStorage Y coordinates for aspect ratio canvas change
+  (function(){
+    try {
+      if(localStorage.getItem('diva_migrated_y') !== 'true') {
+        let items = JSON.parse(localStorage.getItem('diva_custom_items') || '[]');
+        if(items.length > 0) {
+          items.forEach(item => {
+            if(item.y !== undefined) {
+              item.y = Math.round((item.y * (512/312)) * 100) / 100;
+            }
+          });
+          localStorage.setItem('diva_custom_items', JSON.stringify(items));
+        }
+        localStorage.setItem('diva_migrated_y', 'true');
+      }
+    }catch(e){}
+  })();
+</script>
+
+<!-- ================================================================
+     GAMEPLAY EXTRAS: music, sfx, settings, scenes, random outfit,
+     save-look gallery, photo export, achievements, confetti, toasts.
+     Everything here is self-contained (no external files/CDNs) so the
+     game keeps working straight from the folder or via start.bat.
+================================================================= -->
+<script>
+/* ============================= AUDIO ENGINE ============================= */
+const NOTE_FREQ = {
+  C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
+  C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77,
+  C6:1046.50, D6:1174.66, E6:1318.51, G6:1567.98
+};
+
+const AudioEngine = {
+  ctx: null, masterGain: null, musicGain: null, sfxGain: null,
+  musicTimer: null, musicRunning: false,
+  settings: { musicVol: 0.5, sfxVol: 0.8, muted: false },
+
+  ensureCtx() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      this.ctx = new AC();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.connect(this.ctx.destination);
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.connect(this.masterGain);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.connect(this.masterGain);
+      this.applyVolumes();
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    return true;
+  },
+
+  applyVolumes() {
+    if (!this.ctx) return;
+    const m = this.settings.muted ? 0 : 1;
+    const t = this.ctx.currentTime;
+    this.musicGain.gain.setTargetAtTime(this.settings.musicVol * m, t, 0.05);
+    this.sfxGain.gain.setTargetAtTime(this.settings.sfxVol * m, t, 0.05);
+  },
+
+  tone(freq, startTime, dur, { type = 'sine', peak = 0.2, dest = null, detune = 0 } = {}) {
+    if (!this.ctx) return;
+    const o = this.ctx.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    if (detune) o.detune.value = detune;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, startTime);
+    g.gain.linearRampToValueAtTime(peak, startTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+    o.connect(g);
+    g.connect(dest || this.sfxGain);
+    o.start(startTime);
+    o.stop(startTime + dur + 0.05);
+  },
+
+  MELODY: ['E5','G5','C6','G5','E5','D5','C5','D5', 'E5','G5','A5','G5','E5','D5','C5',null,
+           'G5','A5','C6','D6','C6','A5','G5','E5', 'D5','E5','G5','E5','D5','C5','D5',null],
+  BASS:   ['C3',null,'G3',null,'A3',null,'G3',null, 'F3',null,'C3',null,'G3',null,'C3',null,
+           'C3',null,'G3',null,'A3',null,'G3',null, 'F3',null,'G3',null,'C3',null,'G3',null],
+
+  scheduleMusicLoop() {
+    if (!this.musicRunning || !this.ctx) return;
+    const stepDur = 0.30;
+    const t0 = this.ctx.currentTime + 0.05;
+    this.MELODY.forEach((note, i) => {
+      if (!note) return;
+      this.tone(NOTE_FREQ[note], t0 + i * stepDur, stepDur * 1.15, { type: 'triangle', peak: 0.15, dest: this.musicGain });
+      // soft high sparkle overtone for a music-box feel
+      this.tone(NOTE_FREQ[note] * 2, t0 + i * stepDur, stepDur * 0.5, { type: 'sine', peak: 0.03, dest: this.musicGain });
+    });
+    this.BASS.forEach((note, i) => {
+      if (!note) return;
+      this.tone(NOTE_FREQ[note], t0 + i * stepDur, stepDur * 1.6, { type: 'sine', peak: 0.09, dest: this.musicGain });
+    });
+    const loopMs = this.MELODY.length * stepDur * 1000;
+    this.musicTimer = setTimeout(() => this.scheduleMusicLoop(), loopMs);
+  },
+
+  startMusic() {
+    if (!this.ensureCtx()) return;
+    if (this.musicRunning) return;
+    this.musicRunning = true;
+    this.scheduleMusicLoop();
+  },
+
+  stopMusic() {
+    this.musicRunning = false;
+    if (this.musicTimer) clearTimeout(this.musicTimer);
+  },
+
+  sfx(type) {
+    if (!this.ensureCtx() || this.settings.muted) return;
+    const t = this.ctx.currentTime;
+    if (type === 'equip') {
+      this.tone(880, t, 0.11, { type: 'sine', peak: 0.22 });
+      this.tone(1318, t + 0.06, 0.14, { type: 'sine', peak: 0.16 });
+    } else if (type === 'unequip') {
+      this.tone(440, t, 0.09, { type: 'sine', peak: 0.15 });
+    } else if (type === 'click') {
+      this.tone(720, t, 0.05, { type: 'square', peak: 0.05 });
+    } else if (type === 'swoosh') {
+      const o = this.ctx.createOscillator(); o.type = 'sine';
+      const g = this.ctx.createGain();
+      o.frequency.setValueAtTime(280, t);
+      o.frequency.exponentialRampToValueAtTime(760, t + 0.18);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.14, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g); g.connect(this.sfxGain);
+      o.start(t); o.stop(t + 0.22);
+    } else if (type === 'sparkle') {
+      ['C6','E6','G6','C6'].forEach((n, i) => this.tone(NOTE_FREQ[n], t + i * 0.08, 0.22, { type: 'sine', peak: 0.16 }));
+    } else if (type === 'shutter') {
+      this.tone(200, t, 0.03, { type: 'square', peak: 0.12 });
+      this.tone(90, t + 0.03, 0.05, { type: 'square', peak: 0.1 });
+    }
+  }
+};
+
+function playSfx(type) { AudioEngine.sfx(type); }
+function beginMusic() { AudioEngine.ensureCtx(); AudioEngine.startMusic(); }
+
+/* ============================= SETTINGS ============================= */
+const SETTINGS_KEY = 'diva_settings_v1';
+function loadSettingsFromStorage() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (s) Object.assign(AudioEngine.settings, s);
+  } catch (e) {}
+}
+function persistSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(AudioEngine.settings));
+}
+function setMusicVol(v) { AudioEngine.settings.musicVol = v / 100; AudioEngine.applyVolumes(); persistSettings(); }
+function setSfxVol(v) { AudioEngine.settings.sfxVol = v / 100; AudioEngine.applyVolumes(); persistSettings(); playSfx('click'); }
+function toggleMute() {
+  AudioEngine.settings.muted = !AudioEngine.settings.muted;
+  AudioEngine.applyVolumes();
+  persistSettings();
+  updateMuteIcon();
+  const sw = document.getElementById('mute-toggle-switch');
+  if (sw) sw.classList.toggle('on', AudioEngine.settings.muted);
+}
+function updateMuteIcon() {
+  const btn = document.getElementById('mute-btn');
+  if (btn) btn.textContent = AudioEngine.settings.muted ? '🔇' : '🎵';
+}
+
+/* ============================= MODAL ============================= */
+function openModal(title, bodyHtml) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  playSfx('click');
+}
+
+function openSettings() {
+  const s = AudioEngine.settings;
+  const html = `
+    <div class="modal-section">
+      <div class="modal-section-title">Ses</div>
+      <div class="settings-row">
+        <span class="settings-label">🎵 Müzik Sesi</span>
+        <input type="range" min="0" max="100" value="${Math.round(s.musicVol*100)}" oninput="setMusicVol(this.value)">
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">🔔 Efekt Sesi</span>
+        <input type="range" min="0" max="100" value="${Math.round(s.sfxVol*100)}" oninput="setSfxVol(this.value)">
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">🔇 Tüm Sesler</span>
+        <button class="toggle-switch ${s.muted?'on':''}" id="mute-toggle-switch" onclick="toggleMute()"></button>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Veri</div>
+      <button class="modal-action-btn danger" onclick="confirmResetData()">🗑️ Galeri ve Rozetleri Sıfırla</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Hakkında</div>
+      <p class="credits-text">✨ Diva Dress & Makeup – Nisa &amp; Furkan 💕<br>Tüm kıyafet ve makyaj görselleri özenle hazırlanmış, bebek modeline özel hizalanmış gerçek illüstrasyonlardır.</p>
+    </div>
+  `;
+  openModal('⚙️ Ayarlar', html);
+}
+
+function confirmResetData() {
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `
+    <p class="credits-text" style="margin-bottom:14px;">Kaydedilen tüm kombinler ve kazanılan rozetler silinecek. Emin misin?</p>
+    <div style="display:flex; gap:8px;">
+      <button class="modal-action-btn danger" style="flex:1" onclick="doResetData()">Evet, Sıfırla</button>
+      <button class="modal-action-btn" style="flex:1; background:#f0f0f0; color:#616161;" onclick="openSettings()">Vazgeç</button>
+    </div>
+  `;
+}
+function doResetData() {
+  localStorage.removeItem(LOOKS_KEY);
+  localStorage.removeItem(STATS_KEY);
+  stats = loadStats();
+  updateStyleMeter();
+  showToast('🗑️ Veriler sıfırlandı');
+  closeModal();
+}
+
+function openHowTo() {
+  const html = `
+    <div class="howto-step"><div class="howto-num">1</div><div class="howto-text">Üstteki <b>Nisa / Furkan</b> düğmesiyle karakterini seç.</div></div>
+    <div class="howto-step"><div class="howto-num">2</div><div class="howto-text">Alttaki sekmelerden <b>saç, kıyafet, alt giyim, ayakkabı, makyaj</b> kategorisini seç ve bir görsele dokunarak giydir.</div></div>
+    <div class="howto-step"><div class="howto-num">3</div><div class="howto-text">🎲 <b>Şaşırt</b> ile rastgele kombin dene, sahnenin altındaki renkli noktalarla arka planı değiştir.</div></div>
+    <div class="howto-step"><div class="howto-num">4</div><div class="howto-text">🖼️ ile beğendiğin kombinleri <b>kaydet</b> ve sonra tekrar giy, 📸 ile fotoğrafını çekip bilgisayarına indir.</div></div>
+    <div class="howto-step"><div class="howto-num">5</div><div class="howto-text">🏆 rozet ikonundan başarılarını takip et, üstteki çubuk o anki kombinin ne kadar tamamlandığını gösterir.</div></div>
+  `;
+  openModal('❓ Nasıl Oynanır', html);
+}
+
+/* ============================= SCENES ============================= */
+const SCENES = [
+  { id:'pink', name:'Pastel Oda', dot:'#f8bbd0',
+    css:'radial-gradient(circle at 50% 30%, #fff 0%, #fce4ec 55%, #f8bbd0 100%)',
+    furkanCss:'radial-gradient(circle at 50% 30%, #fff 0%, #e3f2fd 55%, #bbdefb 100%)',
+    paint(ctx, s) {
+      const g = ctx.createRadialGradient(s*0.5,s*0.3,0,s*0.5,s*0.3,s*0.8);
+      g.addColorStop(0,'#ffffff'); g.addColorStop(0.55,'#fce4ec'); g.addColorStop(1,'#f8bbd0');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+    },
+    paintFurkan(ctx, s) {
+      const g = ctx.createRadialGradient(s*0.5,s*0.3,0,s*0.5,s*0.3,s*0.8);
+      g.addColorStop(0,'#ffffff'); g.addColorStop(0.55,'#e3f2fd'); g.addColorStop(1,'#bbdefb');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+    }
+  },
+  { id:'sunset', name:'Gün Batımı', dot:'#ff8a65',
+    css:'linear-gradient(180deg,#ffe0b2 0%,#ff8a65 55%,#ad1457 100%)',
+    paint(ctx, s) {
+      const g = ctx.createLinearGradient(0,0,0,s);
+      g.addColorStop(0,'#ffe0b2'); g.addColorStop(0.55,'#ff8a65'); g.addColorStop(1,'#ad1457');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+    }
+  },
+  { id:'night', name:'Yıldızlı Gece', dot:'#1a237e',
+    css:'radial-gradient(circle at 50% 20%, #3949ab 0%, #1a237e 60%, #0d1333 100%)',
+    paint(ctx, s) {
+      const g = ctx.createRadialGradient(s*0.5,s*0.2,0,s*0.5,s*0.2,s*0.9);
+      g.addColorStop(0,'#3949ab'); g.addColorStop(0.6,'#1a237e'); g.addColorStop(1,'#0d1333');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      for (let i=0;i<40;i++) {
+        const rx = (i*137.5)%s, ry = (i*97.3)%s;
+        ctx.beginPath(); ctx.arc(rx, ry, (i%3===0?1.6:0.8), 0, 7); ctx.fill();
+      }
+    }
+  },
+  { id:'runway', name:'Podyum', dot:'#4e342e',
+    css:'linear-gradient(180deg,#efebe9 0%,#d7ccc8 40%,#4e342e 100%)',
+    paint(ctx, s) {
+      const g = ctx.createLinearGradient(0,0,0,s);
+      g.addColorStop(0,'#efebe9'); g.addColorStop(0.4,'#d7ccc8'); g.addColorStop(1,'#4e342e');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+    }
+  },
+  { id:'garden', name:'Bahar Bahçesi', dot:'#81c784',
+    css:'radial-gradient(circle at 50% 20%,#f1f8e9 0%,#c5e1a5 55%,#81c784 100%)',
+    paint(ctx, s) {
+      const g = ctx.createRadialGradient(s*0.5,s*0.2,0,s*0.5,s*0.2,s*0.9);
+      g.addColorStop(0,'#f1f8e9'); g.addColorStop(0.55,'#c5e1a5'); g.addColorStop(1,'#81c784');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+    }
+  },
+];
+let currentScene = 0;
+
+function renderScenePicker() {
+  const wrap = document.getElementById('scene-picker');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  SCENES.forEach((sc, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'scene-dot' + (i === currentScene ? ' active' : '');
+    dot.style.background = sc.dot;
+    dot.title = sc.name;
+    dot.onclick = () => applyScene(i);
+    wrap.appendChild(dot);
+  });
+}
+function applyScene(i) {
+  currentScene = i;
+  const sc = SCENES[i];
+  const bg = document.getElementById('stage-bg');
+  if (bg) bg.style.background = (gameState.currentCharacter === 'furkan' && sc.furkanCss) ? sc.furkanCss : sc.css;
+  renderScenePicker();
+  localStorage.setItem('diva_scene', String(i));
+  playSfx('click');
+}
+
+/* ============================= RANDOM OUTFIT ============================= */
+function randomOutfit() {
+  const ch = gameState.currentCharacter;
+  const cats = ['hair','top','bottom','shoes','makeup_lipstick','makeup_eyeshadow','makeup_blush','makeup_eyeliner'];
+  cats.forEach(cat => {
+    const list = CATALOG[ch][cat];
+    if (!list || !list.length) { gameState.equipped[cat] = null; return; }
+    if ((cat === 'makeup_eyeliner' || cat === 'makeup_eyeshadow') && Math.random() < 0.3) {
+      gameState.equipped[cat] = null; return;
+    }
+    const pick = list[Math.floor(Math.random() * list.length)];
+    gameState.equipped[cat] = pick.id;
+    stats.itemsWorn.add(ch + '|' + cat + '|' + pick.id);
+  });
+  stats.charsUsed.add(ch);
+  stats.randomUsed = (stats.randomUsed || 0) + 1;
+  saveStats();
+  renderCharacter();
+  renderGrid();
+  checkFullOutfitTransition();
+  updateStyleMeter();
+  checkAchievements();
+  playSfx('swoosh');
+  spawnConfetti(45);
+  showToast('🎲 Yeni bir kombin hazır!');
+}
+
+/* ============================= STATS + ACHIEVEMENTS ============================= */
+const STATS_KEY = 'diva_stats_v1';
+function loadStats() {
+  let raw = {};
+  try { raw = JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch (e) {}
+  return {
+    itemsWorn: new Set(raw.itemsWorn || []),
+    charsUsed: new Set(raw.charsUsed || []),
+    fullOutfits: raw.fullOutfits || 0,
+    photosTaken: raw.photosTaken || 0,
+    looksSaved: raw.looksSaved || 0,
+    randomUsed: raw.randomUsed || 0,
+    unlocked: raw.unlocked || [],
+  };
+}
+function saveStats() {
+  localStorage.setItem(STATS_KEY, JSON.stringify({
+    itemsWorn: [...stats.itemsWorn], charsUsed: [...stats.charsUsed],
+    fullOutfits: stats.fullOutfits, photosTaken: stats.photosTaken,
+    looksSaved: stats.looksSaved, randomUsed: stats.randomUsed, unlocked: stats.unlocked,
+  }));
+}
+let stats = loadStats();
+let wasFullOutfit = false;
+
+const BADGES = [
+  { id:'first_item',  name:'İlk Adım',        desc:'İlk parçanı giydir',                 icon:'👗', check: s => s.itemsWorn.size >= 1 },
+  { id:'full_outfit', name:'Tam Kombin',      desc:'Saç + kıyafet + ayakkabı tamamla',   icon:'✨', check: s => s.fullOutfits >= 1 },
+  { id:'fashionista', name:'Moda İkonu',      desc:'5 farklı tam kombin oluştur',        icon:'👑', check: s => s.fullOutfits >= 5 },
+  { id:'collector',   name:'Koleksiyoncu',    desc:'15 farklı parça dene',               icon:'🎀', check: s => s.itemsWorn.size >= 15 },
+  { id:'both_chars',  name:'İkili Yıldız',    desc:"Hem Nisa hem Furkan'ı giydir",       icon:'⭐', check: s => s.charsUsed.size >= 2 },
+  { id:'randomizer',  name:'Şans Perisi',     desc:'Şaşırt düğmesini dene',              icon:'🎲', check: s => s.randomUsed >= 1 },
+  { id:'stylist',     name:'Kayıtlı Stilist', desc:'İlk kombinini kaydet',               icon:'💾', check: s => s.looksSaved >= 1 },
+  { id:'photographer',name:'Fotoğrafçı',      desc:'İlk fotoğrafını çek',                icon:'📸', check: s => s.photosTaken >= 1 },
+];
+
+function checkFullOutfitTransition() {
+  const eq = gameState.equipped;
+  const complete = !!(eq.hair && eq.top && eq.shoes);
+  if (complete && !wasFullOutfit) {
+    stats.fullOutfits++;
+    saveStats();
+    spawnConfetti(70);
+    playSfx('sparkle');
+    showToast('✨ Tam bir kombin yarattın!');
+  }
+  wasFullOutfit = complete;
+}
+
+function checkAchievements() {
+  let any = false;
+  BADGES.forEach(b => {
+    if (!stats.unlocked.includes(b.id) && b.check(stats)) {
+      stats.unlocked.push(b.id);
+      any = true;
+      showToast(`${b.icon} Yeni rozet: ${b.name}!`);
+    }
+  });
+  if (any) { saveStats(); spawnConfetti(90); playSfx('sparkle'); }
+  updateStyleMeter();
+}
+
+function openAchievements() {
+  const html = BADGES.map(b => {
+    const unlocked = stats.unlocked.includes(b.id);
+    return `<div class="badge-row ${unlocked ? 'unlocked' : ''}">
+      <div class="badge-icon">${unlocked ? b.icon : '🔒'}</div>
+      <div class="badge-info"><div class="badge-name">${b.name}</div><div class="badge-desc">${b.desc}</div></div>
+    </div>`;
+  }).join('');
+  openModal(`🏆 Rozetlerim (${stats.unlocked.length}/${BADGES.length})`, html);
+}
+
+function updateStyleMeter() {
+  const ch = gameState.currentCharacter;
+  const cats = ch === 'nisa'
+    ? ['hair','top','bottom','shoes','makeup_lipstick','makeup_eyeshadow','makeup_blush','makeup_eyeliner']
+    : ['hair','top','bottom','shoes','makeup_blush'];
+  const filled = cats.filter(c => gameState.equipped[c]).length;
+  const pct = Math.round((filled / cats.length) * 100);
+  const fill = document.getElementById('style-meter-fill');
+  const label = document.getElementById('style-meter-label');
+  if (fill) fill.style.width = pct + '%';
+  if (label) label.textContent = 'Stil ' + pct + '%';
+  const scoreVal = document.getElementById('style-score-val');
+  if (scoreVal) scoreVal.textContent = stats.unlocked.length + '/' + BADGES.length;
+}
+
+/* ============================= HOOKS from core game ============================= */
+function onOutfitChanged(cat, id, wasEquipped) {
+  if (!wasEquipped && id) stats.itemsWorn.add(gameState.currentCharacter + '|' + cat + '|' + id);
+  stats.charsUsed.add(gameState.currentCharacter);
+  saveStats();
+  checkFullOutfitTransition();
+  updateStyleMeter();
+  checkAchievements();
+}
+function onCharacterSwitched(ch) {
+  wasFullOutfit = false;
+  stats.charsUsed.add(ch);
+  saveStats();
+  applyScene(currentScene);
+  updateStyleMeter();
+  checkAchievements();
+}
+function onOutfitReset() {
+  wasFullOutfit = false;
+  updateStyleMeter();
+}
+
+/* ============================= PHOTO EXPORT ============================= */
+function renderDollToCanvas(size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const c2d = canvas.getContext('2d');
+  const sc = SCENES[currentScene];
+  if (gameState.currentCharacter === 'furkan' && sc.paintFurkan) sc.paintFurkan(c2d, size);
+  else sc.paint(c2d, size);
+
+  const container = document.getElementById('aspect-ratio-canvas');
+  const kids = Array.from(container.children);
+  kids.forEach(el => {
+    if (el.tagName === 'IMG') {
+      try { c2d.drawImage(el, 0, 0, size, size); } catch (e) {}
+    } else if (el.classList.contains('comp-layer')) {
+      const img = el.querySelector('img');
+      if (!img) return;
+      // Mirror any admin placement-override transform (translate/scale/rotate,
+      // same math as the live CSS transform) so exported photos match what's
+      // shown on screen.
+      const hasOv = el.dataset.ovDx !== undefined;
+      if (!hasOv) {
+        try { c2d.drawImage(img, 0, 0, size, size); } catch (e) {}
+      } else {
+        const dx = parseFloat(el.dataset.ovDx || 0), dy = parseFloat(el.dataset.ovDy || 0);
+        const ovScale = parseFloat(el.dataset.ovScale != null ? el.dataset.ovScale : 1);
+        const ovRot = parseFloat(el.dataset.ovRot || 0);
+        c2d.save();
+        c2d.translate(size / 2, size / 2);
+        c2d.translate(dx / 100 * size, dy / 100 * size);
+        c2d.rotate(ovRot * Math.PI / 180);
+        c2d.scale(ovScale, ovScale);
+        try { c2d.drawImage(img, -size / 2, -size / 2, size, size); } catch (e) {}
+        c2d.restore();
+      }
+    } else if (el.classList.contains('custom-rendered-item')) {
+      const img = el.querySelector('img');
+      if (!img || !img.naturalWidth) return;
+      const x = parseFloat(el.dataset.x || 0), y = parseFloat(el.dataset.y || 0);
+      const scalePct = parseFloat(el.dataset.scale || 65), rot = parseFloat(el.dataset.rotation || 0);
+      const w = size * (scalePct / 100);
+      const h = w * (img.naturalHeight / img.naturalWidth);
+      const cx = size * (0.5 + x / 100), cy = size * (0.5 + y / 100);
+      c2d.save();
+      c2d.translate(cx, cy);
+      c2d.rotate(rot * Math.PI / 180);
+      try { c2d.drawImage(img, -w / 2, -h / 2, w, h); } catch (e) {}
+      c2d.restore();
+    }
+  });
+  return canvas;
+}
+
+function makeThumbDataUrl(size) {
+  try { return renderDollToCanvas(size).toDataURL('image/png'); }
+  catch (e) { return null; }
+}
+
+function openPhotoModal() {
+  const canvas = renderDollToCanvas(640);
+  const html = `
+    <div id="photo-canvas-wrap"></div>
+    <button class="modal-action-btn primary" id="photo-download-btn">💾 Fotoğrafı İndir</button>
+    <p class="credits-text" style="margin-top:10px; text-align:center;">İndirme çalışmazsa oyunu <b>start.bat</b> ile başlatıp tekrar dene.</p>
+  `;
+  openModal('📸 Fotoğrafın', html);
+  document.getElementById('photo-canvas-wrap').appendChild(canvas);
+  document.getElementById('photo-download-btn').onclick = () => downloadCanvas(canvas);
+  stats.photosTaken++; saveStats();
+  playSfx('shutter');
+  spawnConfetti(30);
+  checkAchievements();
+}
+
+function downloadCanvas(canvas) {
+  try {
+    canvas.toBlob(blob => {
+      if (!blob) { showToast('⚠️ İndirilemedi — start.bat ile açmayı dene'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `diva_${gameState.currentCharacter}_${Date.now()}.png`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      showToast('📸 Fotoğraf indirildi!');
+    });
+  } catch (e) {
+    showToast('⚠️ İndirilemedi — start.bat ile açmayı dene');
+  }
+}
+
+/* ============================= SAVE-LOOK GALLERY ============================= */
+const LOOKS_KEY = 'diva_saved_looks_v1';
+function loadLooks() { try { return JSON.parse(localStorage.getItem(LOOKS_KEY)) || []; } catch (e) { return []; } }
+function persistLooks(arr) { localStorage.setItem(LOOKS_KEY, JSON.stringify(arr)); }
+
+function openGallery() {
+  const looks = loadLooks();
+  const cardsHtml = looks.map(l => `
+    <div class="gallery-card" onclick="applyLook('${l.id}')">
+      <button class="gallery-del" onclick="event.stopPropagation(); deleteLook('${l.id}')">✕</button>
+      ${l.thumb ? `<img src="${l.thumb}">` : `<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:26px;background:${l.char==='nisa'?'#fce4ec':'#e3f2fd'}">${l.char==='nisa'?'👗':'🕴️'}</div>`}
+      <div class="gallery-name">${l.name}</div>
+    </div>`).join('');
+  const html = `
+    <div class="save-look-form">
+      <input type="text" id="save-look-name" placeholder="Kombine bir isim ver..." maxlength="20">
+      <button onclick="saveCurrentLook()">Kaydet</button>
+    </div>
+    ${looks.length ? `<div id="gallery-grid">${cardsHtml}</div>` : `<div class="gallery-empty">Henüz kayıtlı kombin yok 💭<br>Bir kombin yap ve yukarıdan kaydet!</div>`}
+  `;
+  openModal('🖼️ Kombin Galerim', html);
+}
+
+function saveCurrentLook() {
+  const nameInput = document.getElementById('save-look-name');
+  const name = ((nameInput && nameInput.value) || 'Kombinim').trim().slice(0, 20) || 'Kombinim';
+  const looks = loadLooks();
+  const thumb = makeThumbDataUrl(220);
+  looks.unshift({ id: 'look_' + Date.now(), name, char: gameState.currentCharacter, equipped: { ...gameState.equipped }, thumb });
+  if (looks.length > 30) looks.length = 30;
+  persistLooks(looks);
+  stats.looksSaved++; saveStats();
+  playSfx('sparkle');
+  spawnConfetti(50);
+  showToast('💾 Kombin kaydedildi!');
+  checkAchievements();
+  openGallery();
+}
+
+function applyLook(id) {
+  const looks = loadLooks();
+  const look = looks.find(l => l.id === id);
+  if (!look) return;
+  if (gameState.currentCharacter !== look.char) switchCharacter(look.char);
+  gameState.equipped = { ...gameState.equipped, ...look.equipped };
+  renderCharacter();
+  renderGrid();
+  updateStyleMeter();
+  checkFullOutfitTransition();
+  closeModal();
+  playSfx('equip');
+  showToast('✨ Kombin uygulandı: ' + look.name);
+}
+
+function deleteLook(id) {
+  persistLooks(loadLooks().filter(l => l.id !== id));
+  openGallery();
+  playSfx('click');
+}
+
+/* ============================= TOASTS ============================= */
+function showToast(msg) {
+  const stack = document.getElementById('toast-stack');
+  if (!stack) return;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  stack.appendChild(t);
+  setTimeout(() => t.remove(), 3100);
+}
+
+/* ============================= CONFETTI ============================= */
+let confettiCtx = null, confettiParticles = [];
+function initConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const appEl = document.getElementById('app');
+  if (!canvas || !appEl) return;
+  function resize() { canvas.width = appEl.clientWidth; canvas.height = appEl.clientHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  confettiCtx = canvas.getContext('2d');
+  requestAnimationFrame(confettiLoop);
+}
+function spawnConfetti(n) {
+  const canvas = document.getElementById('confetti-canvas');
+  if (!canvas) return;
+  const cx = canvas.width / 2, cy = canvas.height * 0.32;
+  const colors = ['#f06292','#ba68c8','#42a5f5','#ffd54f','#4dd0e1','#ff8a65'];
+  for (let i = 0; i < n; i++) {
+    confettiParticles.push({
+      x: cx + (Math.random() - 0.5) * 140, y: cy + (Math.random() - 0.5) * 60,
+      vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 7 - 2,
+      g: 0.18 + Math.random() * 0.06,
+      size: 4 + Math.random() * 5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * 360, vr: (Math.random() - 0.5) * 14,
+      life: 0, maxLife: 65 + Math.random() * 35,
+    });
+  }
+}
+function confettiLoop() {
+  const canvas = document.getElementById('confetti-canvas');
+  if (canvas && confettiCtx) {
+    confettiCtx.clearRect(0, 0, canvas.width, canvas.height);
+    confettiParticles.forEach(p => {
+      p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life++;
+      const alpha = Math.max(0, 1 - p.life / p.maxLife);
+      confettiCtx.save();
+      confettiCtx.translate(p.x, p.y);
+      confettiCtx.rotate(p.rot * Math.PI / 180);
+      confettiCtx.globalAlpha = alpha;
+      confettiCtx.fillStyle = p.color;
+      confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      confettiCtx.restore();
+    });
+    confettiParticles = confettiParticles.filter(p => p.life < p.maxLife && p.y < canvas.height + 40);
+  }
+  requestAnimationFrame(confettiLoop);
+}
+
+/* ============================= INIT ============================= */
+function initExtras() {
+  loadSettingsFromStorage();
+  updateMuteIcon();
+  const savedScene = parseInt(localStorage.getItem('diva_scene'), 10);
+  currentScene = isNaN(savedScene) ? 0 : Math.min(savedScene, SCENES.length - 1);
+  renderScenePicker();
+  applyScene(currentScene);
+  initConfetti();
+  updateStyleMeter();
+  checkFullOutfitTransition();
+  // resume audio context on first user interaction anywhere (autoplay policy)
+  const resumeOnce = () => { AudioEngine.ensureCtx(); document.removeEventListener('pointerdown', resumeOnce); };
+  document.addEventListener('pointerdown', resumeOnce, { once: true });
+}
+</script>
+
+<script>
+  // Register the offline service worker (see sw.js). Runs only over HTTPS
+  // or on localhost — browsers refuse service workers on plain http:// to
+  // a non-localhost address, which is why plain LAN Wi-Fi hosting can't
+  // give true offline support; see the deployment notes shipped alongside
+  // this project for how to host this over HTTPS so an iPhone can install
+  // it and keep playing with Wi-Fi off.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
+</body>
+
+</html>

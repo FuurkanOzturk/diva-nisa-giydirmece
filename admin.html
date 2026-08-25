@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🛠️ Diva Dress & Makeup – Kıyafet & Konumlandırma Admin Paneli</title>
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink-deep:   #e91e8c;
+      --pink-main:   #f06292;
+      --pink-light:  #f8bbd0;
+      --pink-pale:   #fce4ec;
+      --border-col:  #e0e0e0;
+      --radius:      12px;
+      --transition:  0.2s ease;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f4f6f9;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #ff4081 0%, #f06292 50%, #ba68c8 100%);
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 10;
+    }
+    header h1 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .header-links a {
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.25);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 700;
+      transition: var(--transition);
+    }
+    .header-links a:hover { background: #fff; color: var(--pink-deep); }
+
+    #workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* PREVIEW STAGE */
+    #stage-panel {
+      flex: 1;
+      background: radial-gradient(circle at 50% 40%, #ffffff 0%, #f3e5f5 70%, #e1bee7 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      border-right: 2px solid var(--border-col);
+    }
+
+    /* Standard Doll Stage Box (320x520) */
+    #stage-box {
+      position: relative;
+      width: 320px;
+      height: 520px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      overflow: hidden;
+      border: 4px solid #fff;
+    }
+
+    #stage-bg-preview {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, #fff 0%, #fce4ec 60%, #f8bbd0 100%);
+      pointer-events: none;
+    }
+
+    /* Anatomical Guide Lines */
+    #guides {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
+    }
+    .guide-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      border-bottom: 1px dashed rgba(233,30,140,0.4);
+      font-size: 9px;
+      color: rgba(233,30,140,0.8);
+      font-weight: bold;
+      padding-left: 4px;
+    }
+    .g-head { top: 18%; }
+    .g-chest { top: 38%; }
+    .g-waist { top: 60%; }
+    .g-feet { top: 92%; }
+
+    .base-doll-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Editable Item Container: Uses Parent-Relative Percentages */
+    #item-holder {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      transform-origin: center center;
+      cursor: grab;
+      user-select: none;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #item-holder:active { cursor: grabbing; }
+    #item-holder img {
+      width: 100%;
+      height: auto;
+      display: block;
+      pointer-events: none;
+    }
+    #item-holder.selected {
+      outline: 2px dashed var(--pink-deep);
+      outline-offset: 3px;
+    }
+
+    /* Existing-item preview: mimics the game's full-canvas .comp-layer, with an
+       admin nudge transform (translate/scale/rotate) layered on top. */
+    #existing-item-preview {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 51;
+      display: none;
+    }
+    #existing-item-preview.active { display: block; }
+    #existing-item-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Mode toggle */
+    .mode-tabs {
+      display: flex;
+      gap: 6px;
+      background: #f0f0f0;
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .mode-tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 9px 8px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #757575;
+      transition: var(--transition);
+    }
+    .mode-tab.active {
+      background: #fff;
+      color: var(--pink-deep);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* CONTROL PANEL */
+    #control-panel {
+      width: 440px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 18px;
+      gap: 14px;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.03);
+    }
+
+    .card {
+      background: #fafafa;
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card h2 {
+      font-size: 13px;
+      font-weight: 800;
+      color: #212121;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    label { font-size: 11px; font-weight: 700; color: #616161; }
+
+    input[type="text"], select {
+      padding: 7px 10px;
+      border: 1.5px solid #ccc;
+      border-radius: 8px;
+      font-size: 12px;
+      outline: none;
+      background: #fff;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--pink-main); }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--pink-deep);
+    }
+    .slider-row input[type="number"] {
+      width: 65px;
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    /* D-pad Nudge Controls */
+    .nudge-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .nudge-btn {
+      width: 32px;
+      height: 30px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nudge-btn:hover { background: #f0f0f0; }
+
+    #drop-area {
+      border: 2px dashed var(--pink-main);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      background: #fff;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    #drop-area:hover { background: var(--pink-pale); }
+    #drop-area p { font-size: 11px; color: #757575; margin-top: 4px; }
+
+    .btn {
+      padding: 9px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+    .btn-primary {
+      background: var(--pink-deep);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(233,30,140,0.3);
+    }
+    .btn-primary:hover { background: #c2185b; }
+    .btn-secondary { background: #e0e0e0; color: #333; }
+    .btn-danger { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+    #custom-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 6px;
+    }
+    .item-row span { font-size: 11px; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🛠️ Diva Dress & Makeup – Kıyafet & Konumlandırma Editörü</h1>
+    <div class="header-links">
+      <a href="index.html" target="_blank">🎮 Oyunu Aç (index.html)</a>
+    </div>
+  </header>
+
+  <div id="workspace">
+
+    <!-- PREVIEW STAGE -->
+    <div id="stage-panel">
+      <div id="stage-box">
+        <div id="stage-bg-preview"></div>
+        <div id="aspect-ratio-canvas" style="position: absolute; top: 50%; left: 50%; width: 100%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%);">
+          <div id="guides">
+          <div class="guide-line g-head">Saç / Kafa Bölgesi (-52.5%)</div>
+          <div class="guide-line g-chest">Omuz / Göğüs (-19.7%)</div>
+          <div class="guide-line g-waist">Bel / Alt Giyim (+16.4%)</div>
+          <div class="guide-line g-feet">Ayakkabı (+72.2%)</div>
+        </div>
+        <img id="base-img" class="base-doll-img" src="components/nisa_base.png" alt="Base Doll" />
+        <div id="item-holder" class="selected">
+          <img id="preview-img" src="components/nisa_dress_princess_pink.png" alt="Item Preview" />
+        </div>
+        <div id="existing-item-preview">
+          <img id="existing-preview-img" src="" alt="Existing Item Preview" />
+        </div>
+        </div>
+      </div>
+      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+        <label style="font-size: 12px; font-weight: bold; cursor: pointer; color: #555;">
+          <input type="checkbox" id="chk-guides" onchange="toggleGuides()" /> 🎯 Hizalama Çizgilerini Göster
+        </label>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div id="control-panel">
+
+      <!-- 1. Selection -->
+      <div class="card">
+        <h2>👤 1. Karakter ve Kategori</h2>
+        <div style="display: flex; gap: 8px;">
+          <div class="form-group" style="flex: 1;">
+            <label>Karakter:</label>
+            <select id="char-select" onchange="onCharChange()">
+              <option value="nisa">Nisa (Kadın)</option>
+              <option value="furkan">Furkan (Erkek)</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Kategori:</label>
+            <select id="cat-select" onchange="onCatChange()">
+              <option value="top">Kıyafet / Üst (top)</option>
+              <option value="hair">Saç (hair)</option>
+              <option value="bottom">Alt Giyim (bottom)</option>
+              <option value="shoes">Ayakkabı (shoes)</option>
+              <option value="makeup_lipstick">Makyaj: Ruj</option>
+              <option value="makeup_eyeshadow">Makyaj: Far</option>
+              <option value="makeup_blush">Makyaj: Allık</option>
+              <option value="makeup_eyeliner">Makyaj: Liner</option>
+              <option value="accessories">Aksesuar</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode toggle -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="mode-tab-new" onclick="switchMode('new')">🆕 Yeni Kıyafet Yükle</button>
+        <button class="mode-tab" id="mode-tab-existing" onclick="switchMode('existing')">🎯 Mevcut Kıyafeti Konumlandır</button>
+      </div>
+
+      <!-- 2b. Existing item picker (existing-item mode only) -->
+      <div class="card" id="existing-picker-card" style="display:none;">
+        <h2>🎯 2. Mevcut Görseli Seç</h2>
+        <div class="form-group">
+          <label>Bu kategorideki mevcut ürünler:</label>
+          <select id="existing-item-select" onchange="onExistingItemChange()"></select>
+        </div>
+        <p style="font-size: 11px; color: #888;">
+          Bu araç, oyunda zaten var olan bir kıyafet/saç/ayakkabı/aksesuarın konumunu
+          görseli değiştirmeden ince ayar yapmanızı sağlar (kaydırma, ölçek, döndürme).
+        </p>
+      </div>
+
+      <!-- 2. Upload (new-item mode only) -->
+      <div class="card" id="upload-card-2">
+        <h2>🖼️ 2. Kıyafet / Saç Görseli Yükle</h2>
+        <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="onFileSelected(event)" />
+        <div id="drop-area" onclick="document.getElementById('file-input').click()">
+          <span style="font-size: 22px;">📁</span>
+          <p><strong>Görsel Seçin (Otomatik şeffaf kenar kırpma yapılır)</strong></p>
+        </div>
+        <div class="form-group">
+          <label>Kıyafet İsmi:</label>
+          <input type="text" id="item-name" placeholder="Örn: Mavi Çiçekli Elbise" value="Özel Kıyafet" />
+        </div>
+      </div>
+
+      <!-- 3. Exact Parent-Relative Calibration (new-item mode only) -->
+      <div class="card" id="upload-card-3">
+        <h2>📐 3. Konumlandırma & Scale Ayarı</h2>
+
+        <div class="form-group">
+          <label>↔ Yatay Konum (X %):</label>
+          <div class="slider-row">
+            <input type="range" id="slider-x" min="-60" max="60" value="0" step="0.5" oninput="updateTransform()" />
+            <input type="number" id="num-x" value="0" step="0.5" oninput="syncSlider('x')" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>↕ Dikey Konum (Y %):</label>
+          <div class="slider-row">
+            <input type="range" id="slider-y" min="-60" max="60" value="-12" step="0.5" oninput="updateTransform()" />
+            <input type="number" id="num-y" value="-12" step="0.5" oninput="syncSlider('y')" />
+          </div>
+        </div>
+
+        <!-- Fine Nudge Pad -->
+        <div class="form-group">
+          <label>Hassas İnce Ayar (1 Adım = %0.5):</label>
+          <div class="nudge-panel">
+            <button class="nudge-btn" onclick="nudge(0, -0.5)">▲</button>
+            <button class="nudge-btn" onclick="nudge(-0.5, 0)">◀</button>
+            <button class="nudge-btn" onclick="nudge(0.5, 0)">▶</button>
+            <button class="nudge-btn" onclick="nudge(0, 0.5)">▼</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>🔍 Genişlik / Scale (%):</label>
+          <div class="slider-row">
+            <input type="range" id="slider-scale" min="15" max="150" value="65" step="1" oninput="updateTransform()" />
+            <input type="number" id="num-scale" value="65" step="1" oninput="syncSlider('scale')" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>🔄 Döndürme (Rotation °):</label>
+          <div class="slider-row">
+            <input type="range" id="slider-rot" min="-180" max="180" value="0" step="1" oninput="updateTransform()" />
+            <input type="number" id="num-rot" value="0" step="1" oninput="syncSlider('rot')" />
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" onclick="resetToCategoryDefaults()">🎯 Kategori Varsayılan Konumuna Sıfırla</button>
+      </div>
+
+      <!-- 4. Save (new-item mode only) -->
+      <div class="card" id="upload-card-4">
+        <h2>💾 4. Kaydet ve Oyuna Ekle</h2>
+        <button class="btn btn-primary" onclick="saveItemToGame()">✨ Bu Kıyafeti components/ ve Oyuna Kaydet</button>
+      </div>
+
+      <!-- 3b. Nudge adjustment for an EXISTING catalog item (existing-item mode only) -->
+      <div class="card" id="existing-nudge-card" style="display:none;">
+        <h2>📐 3. İnce Ayar (Kaydırma / Ölçek / Döndürme)</h2>
+        <p style="font-size: 11px; color: #888;">
+          Bu değerler görselin OYUNDAKİ ŞU ANKİ konumuna göre ek bir kaydırmadır (varsayılan: 0 / 0 / %100 / 0°
+          = değişiklik yok).
+        </p>
+
+        <div class="form-group">
+          <label>↔ Yatay Kaydırma (X %):</label>
+          <div class="slider-row">
+            <input type="range" id="ov-slider-dx" min="-30" max="30" value="0" step="0.5" oninput="updateExistingTransform()" />
+            <input type="number" id="ov-num-dx" value="0" step="0.5" oninput="syncOvSlider('dx')" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>↕ Dikey Kaydırma (Y %):</label>
+          <div class="slider-row">
+            <input type="range" id="ov-slider-dy" min="-30" max="30" value="0" step="0.5" oninput="updateExistingTransform()" />
+            <input type="number" id="ov-num-dy" value="0" step="0.5" oninput="syncOvSlider('dy')" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Hassas İnce Ayar (1 Adım = %0.5):</label>
+          <div class="nudge-panel">
+            <button class="nudge-btn" onclick="nudgeExisting(0, -0.5)">▲</button>
+            <button class="nudge-btn" onclick="nudgeExisting(-0.5, 0)">◀</button>
+            <button class="nudge-btn" onclick="nudgeExisting(0.5, 0)">▶</button>
+            <button class="nudge-btn" onclick="nudgeExisting(0, 0.5)">▼</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>🔍 Ölçek Çarpanı (%, 100 = değişiklik yok):</label>
+          <div class="slider-row">
+            <input type="range" id="ov-slider-scale" min="50" max="200" value="100" step="1" oninput="updateExistingTransform()" />
+            <input type="number" id="ov-num-scale" value="100" step="1" oninput="syncOvSlider('scale')" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>🔄 Döndürme (Rotation °):</label>
+          <div class="slider-row">
+            <input type="range" id="ov-slider-rot" min="-45" max="45" value="0" step="1" oninput="updateExistingTransform()" />
+            <input type="number" id="ov-num-rot" value="0" step="1" oninput="syncOvSlider('rot')" />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="saveOverride()">💾 Konumu Kaydet</button>
+          <button class="btn btn-secondary" style="flex:1;" onclick="resetOverride()">↩️ Sıfırla</button>
+        </div>
+      </div>
+
+      <!-- Active placement overrides -->
+      <div class="card" id="overrides-list-card" style="display:none;">
+        <h2>📍 Aktif Konum Ayarları</h2>
+        <div id="overrides-list">
+          <p style="font-size: 11px; color: #888;">Henüz konum ayarı kaydedilmedi.</p>
+        </div>
+      </div>
+
+      <!-- Custom items -->
+      <div class="card" id="upload-card-custom-list">
+        <h2>📋 Eklenen Özel Kıyafetler</h2>
+        <div id="custom-items-list">
+          <p style="font-size: 11px; color: #888;">Henüz özel kıyafet eklenmedi.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="catalog.js"></script>
+  <script>
+    // BASE_CATALOG is the exact same object index.html renders from (loaded
+    // from the shared catalog.js above) — never a hand-maintained copy — so
+    // the admin item picker and preview can never drift out of sync with
+    // what the game actually shows.
+    const BASE_CATALOG = CATALOG;
+
+    const PLACEMENT_KEY = 'diva_placement_overrides_v1';
+    let currentMode = 'new'; // 'new' | 'existing'
+    let currentOverrideItemId = null;
+    let currentOverride = { dx: 0, dy: 0, scale: 100, rot: 0 };
+
+    // Smart anatomical snap presets for categories
+    const CAT_DEFAULTS = {
+      hair:             { y: -32, scale: 50, x: 0 },
+      top:              { y: -12, scale: 65, x: 0 },
+      bottom:           { y: 10,  scale: 55, x: 0 },
+      shoes:            { y: 44,  scale: 35, x: 0 },
+      makeup_lipstick:  { y: -26, scale: 20, x: 0 },
+      makeup_eyeshadow: { y: -30, scale: 22, x: 0 },
+      makeup_blush:     { y: -27, scale: 30, x: 0 },
+      accessories:      { y: -35, scale: 35, x: 0 }
+    };
+
+    let currentItem = {
+      id: 'custom_' + Date.now(),
+      name: 'Özel Kıyafet',
+      char: 'nisa',
+      category: 'top',
+      src: 'components/nisa_top_1.png',
+      x: 0,
+      y: -12,
+      scale: 65,
+      rotation: 0
+    };
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initialItemX = 0, initialItemY = 0;
+
+    const itemHolder = document.getElementById('item-holder');
+    const previewImg = document.getElementById('preview-img');
+    const baseImg = document.getElementById('base-img');
+    const stageBox = document.getElementById('stage-box');
+
+    function init() {
+      loadCustomItemsList();
+      setupDrag();
+      updateTransform();
+      loadOverridesList();
+    }
+
+    function toggleGuides() {
+      const show = document.getElementById('chk-guides').checked;
+      document.getElementById('guides').style.display = show ? 'block' : 'none';
+    }
+
+    function onCharChange() {
+      const char = document.getElementById('char-select').value;
+      currentItem.char = char;
+      baseImg.src = char === 'nisa' ? 'components/nisa_base.png' : 'components/furkan_base.png';
+      loadCustomItemsList();
+      if (currentMode === 'existing') populateExistingItemDropdown();
+    }
+
+    function onCatChange() {
+      const cat = document.getElementById('cat-select').value;
+      currentItem.category = cat;
+      resetToCategoryDefaults();
+      if (currentMode === 'existing') populateExistingItemDropdown();
+    }
+
+    function resetToCategoryDefaults() {
+      const cat = currentItem.category;
+      const def = CAT_DEFAULTS[cat] || { y: 0, scale: 65, x: 0 };
+      currentItem.x = def.x;
+      currentItem.y = def.y;
+      currentItem.scale = def.scale;
+      currentItem.rotation = 0;
+
+      document.getElementById('slider-x').value = currentItem.x;
+      document.getElementById('slider-y').value = currentItem.y;
+      document.getElementById('slider-scale').value = currentItem.scale;
+      document.getElementById('slider-rot').value = 0;
+      updateTransform();
+    }
+
+    /* ============================================================
+       EXISTING-ITEM POSITIONING MODE
+       Lets the admin pick any item already shipping in the game
+       (hair, clothes, shoes, makeup, accessories) and nudge its
+       on-doll position/scale/rotation without touching the image
+       file itself. Saved as a small per-item delta in localStorage
+       under PLACEMENT_KEY, read by index.html at render time.
+       ============================================================ */
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('mode-tab-new').classList.toggle('active', mode === 'new');
+      document.getElementById('mode-tab-existing').classList.toggle('active', mode === 'existing');
+
+      const newOnlyIds = ['upload-card-2', 'upload-card-3', 'upload-card-4', 'upload-card-custom-list'];
+      const existingOnlyIds = ['existing-picker-card', 'existing-nudge-card', 'overrides-list-card'];
+      newOnlyIds.forEach(id => document.getElementById(id).style.display = (mode === 'new') ? '' : 'none');
+      existingOnlyIds.forEach(id => document.getElementById(id).style.display = (mode === 'existing') ? '' : 'none');
+
+      itemHolder.style.display = (mode === 'new') ? 'flex' : 'none';
+      document.getElementById('existing-item-preview').classList.toggle('active', mode === 'existing');
+
+      if (mode === 'existing') {
+        populateExistingItemDropdown();
+        loadOverridesList();
+      }
+    }
+
+    function getOverridesStore() {
+      try {
+        return JSON.parse(localStorage.getItem(PLACEMENT_KEY) || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function populateExistingItemDropdown() {
+      const char = document.getElementById('char-select').value;
+      const cat = document.getElementById('cat-select').value;
+      const items = (BASE_CATALOG[char] && BASE_CATALOG[char][cat]) || [];
+      const sel = document.getElementById('existing-item-select');
+      sel.innerHTML = '';
+      if (items.length === 0) {
+        sel.innerHTML = '<option value="">(Bu kategoride ürün yok)</option>';
+        document.getElementById('existing-item-preview').style.display = 'none';
+        return;
+      }
+      items.forEach(it => {
+        const opt = document.createElement('option');
+        opt.value = it.id;
+        opt.textContent = it.label + ' (' + it.id + ')';
+        sel.appendChild(opt);
+      });
+      onExistingItemChange();
+    }
+
+    function onExistingItemChange() {
+      const char = document.getElementById('char-select').value;
+      const cat = document.getElementById('cat-select').value;
+      const id = document.getElementById('existing-item-select').value;
+      const items = (BASE_CATALOG[char] && BASE_CATALOG[char][cat]) || [];
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+
+      currentOverrideItemId = id;
+      const store = getOverridesStore();
+      const saved = store[id];
+      currentOverride = saved ? { ...saved } : { dx: 0, dy: 0, scale: 1, rot: 0 };
+
+      document.getElementById('existing-preview-img').src = item.src;
+      document.getElementById('ov-slider-dx').value = currentOverride.dx || 0;
+      document.getElementById('ov-num-dx').value = currentOverride.dx || 0;
+      document.getElementById('ov-slider-dy').value = currentOverride.dy || 0;
+      document.getElementById('ov-num-dy').value = currentOverride.dy || 0;
+      document.getElementById('ov-slider-scale').value = Math.round((currentOverride.scale != null ? currentOverride.scale : 1) * 100);
+      document.getElementById('ov-num-scale').value = Math.round((currentOverride.scale != null ? currentOverride.scale : 1) * 100);
+      document.getElementById('ov-slider-rot').value = currentOverride.rot || 0;
+      document.getElementById('ov-num-rot').value = currentOverride.rot || 0;
+
+      updateExistingTransform();
+    }
+
+    function updateExistingTransform() {
+      const dx = parseFloat(document.getElementById('ov-slider-dx').value) || 0;
+      const dy = parseFloat(document.getElementById('ov-slider-dy').value) || 0;
+      const scalePct = parseFloat(document.getElementById('ov-slider-scale').value) || 100;
+      const rot = parseFloat(document.getElementById('ov-slider-rot').value) || 0;
+
+      document.getElementById('ov-num-dx').value = dx;
+      document.getElementById('ov-num-dy').value = dy;
+      document.getElementById('ov-num-scale').value = scalePct;
+      document.getElementById('ov-num-rot').value = rot;
+
+      currentOverride = { dx, dy, scale: scalePct / 100, rot };
+
+      const layer = document.getElementById('existing-item-preview');
+      layer.style.transform = `translate(${dx}%, ${dy}%) scale(${scalePct / 100}) rotate(${rot}deg)`;
+    }
+
+    function syncOvSlider(key) {
+      if (key === 'dx') document.getElementById('ov-slider-dx').value = document.getElementById('ov-num-dx').value;
+      if (key === 'dy') document.getElementById('ov-slider-dy').value = document.getElementById('ov-num-dy').value;
+      if (key === 'scale') document.getElementById('ov-slider-scale').value = document.getElementById('ov-num-scale').value;
+      if (key === 'rot') document.getElementById('ov-slider-rot').value = document.getElementById('ov-num-rot').value;
+      updateExistingTransform();
+    }
+
+    function nudgeExisting(ddx, ddy) {
+      const dx = Math.round(((parseFloat(document.getElementById('ov-slider-dx').value) || 0) + ddx) * 10) / 10;
+      const dy = Math.round(((parseFloat(document.getElementById('ov-slider-dy').value) || 0) + ddy) * 10) / 10;
+      document.getElementById('ov-slider-dx').value = dx;
+      document.getElementById('ov-num-dx').value = dx;
+      document.getElementById('ov-slider-dy').value = dy;
+      document.getElementById('ov-num-dy').value = dy;
+      updateExistingTransform();
+    }
+
+    function saveOverride() {
+      if (!currentOverrideItemId) return;
+      const store = getOverridesStore();
+      store[currentOverrideItemId] = { ...currentOverride };
+      localStorage.setItem(PLACEMENT_KEY, JSON.stringify(store));
+      loadOverridesList();
+      alert('✅ Konum kaydedildi! index.html sayfasında bu ürün artık burada gördüğünüz konumda görünecek.');
+    }
+
+    function resetOverride() {
+      if (!currentOverrideItemId) return;
+      const store = getOverridesStore();
+      delete store[currentOverrideItemId];
+      localStorage.setItem(PLACEMENT_KEY, JSON.stringify(store));
+      currentOverride = { dx: 0, dy: 0, scale: 1, rot: 0 };
+      document.getElementById('ov-slider-dx').value = 0;
+      document.getElementById('ov-num-dx').value = 0;
+      document.getElementById('ov-slider-dy').value = 0;
+      document.getElementById('ov-num-dy').value = 0;
+      document.getElementById('ov-slider-scale').value = 100;
+      document.getElementById('ov-num-scale').value = 100;
+      document.getElementById('ov-slider-rot').value = 0;
+      document.getElementById('ov-num-rot').value = 0;
+      updateExistingTransform();
+      loadOverridesList();
+    }
+
+    function findCatalogItemById(id) {
+      for (const ch of Object.keys(BASE_CATALOG)) {
+        for (const cat of Object.keys(BASE_CATALOG[ch])) {
+          const found = BASE_CATALOG[ch][cat].find(i => i.id === id);
+          if (found) return { ...found, char: ch, category: cat };
+        }
+      }
+      return null;
+    }
+
+    function loadOverridesList() {
+      const store = getOverridesStore();
+      const ids = Object.keys(store);
+      const listEl = document.getElementById('overrides-list');
+      const cardEl = document.getElementById('overrides-list-card');
+      listEl.innerHTML = '';
+
+      if (ids.length === 0) {
+        listEl.innerHTML = '<p style="font-size: 11px; color: #888;">Henüz konum ayarı kaydedilmedi.</p>';
+      } else {
+        ids.forEach(id => {
+          const meta = findCatalogItemById(id);
+          const label = meta ? `${meta.char === 'nisa' ? '👩' : '👨'} [${meta.category}] ${meta.label}` : id;
+          const row = document.createElement('div');
+          row.className = 'item-row';
+          row.innerHTML = `
+            <span>${label}</span>
+            <div>
+              <button class="btn btn-secondary" style="padding: 3px 6px; font-size: 10px;" onclick="editOverrideFromList('${id}')">✏️</button>
+              <button class="btn btn-danger" style="padding: 3px 6px; font-size: 10px;" onclick="deleteOverrideFromList('${id}')">🗑️</button>
+            </div>
+          `;
+          listEl.appendChild(row);
+        });
+      }
+      // keep visible only in existing mode, but populate regardless so switching modes shows fresh data
+      cardEl.style.display = (currentMode === 'existing') ? '' : 'none';
+    }
+
+    function editOverrideFromList(id) {
+      const meta = findCatalogItemById(id);
+      if (!meta) return;
+      if (currentMode !== 'existing') switchMode('existing');
+      document.getElementById('char-select').value = meta.char;
+      document.getElementById('cat-select').value = meta.category;
+      onCharChange();
+      populateExistingItemDropdown();
+      document.getElementById('existing-item-select').value = id;
+      onExistingItemChange();
+    }
+
+    function deleteOverrideFromList(id) {
+      if (!confirm('Bu konum ayarını silmek istediğinize emin misiniz? (Ürünün görseli silinmez, sadece varsayılan konuma döner.)')) return;
+      const store = getOverridesStore();
+      delete store[id];
+      localStorage.setItem(PLACEMENT_KEY, JSON.stringify(store));
+      loadOverridesList();
+      if (currentOverrideItemId === id) resetOverride();
+    }
+
+    // Auto-crop empty transparent borders from canvas image
+    function cropTransparentCanvas(imgElement, callback) {
+      const canvas = document.createElement('canvas');
+      canvas.width = imgElement.naturalWidth || imgElement.width;
+      canvas.height = imgElement.naturalHeight || imgElement.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgElement, 0, 0);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+      let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+      let found = false;
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const alpha = data[(y * canvas.width + x) * 4 + 3];
+          if (alpha > 10) {
+            found = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (!found || (minX === 0 && minY === 0 && maxX === canvas.width && maxY === canvas.height)) {
+        callback(imgElement.src);
+        return;
+      }
+
+      const trimWidth = maxX - minX + 1;
+      const trimHeight = maxY - minY + 1;
+      const trimmedCanvas = document.createElement('canvas');
+      trimmedCanvas.width = trimWidth;
+      trimmedCanvas.height = trimHeight;
+      const trimmedCtx = trimmedCanvas.getContext('2d');
+      trimmedCtx.drawImage(canvas, minX, minY, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
+
+      callback(trimmedCanvas.toDataURL());
+    }
+
+    function onFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const tempImg = new Image();
+        tempImg.onload = function() {
+          cropTransparentCanvas(tempImg, function(trimmedSrc) {
+            currentItem.src = trimmedSrc;
+            previewImg.src = trimmedSrc;
+            currentItem.id = 'custom_' + Date.now();
+            currentItem.name = file.name.replace(/\.[^/.]+$/, "");
+            document.getElementById('item-name').value = currentItem.name;
+            resetToCategoryDefaults();
+          });
+        };
+        tempImg.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setupDrag() {
+      itemHolder.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialItemX = currentItem.x;
+        initialItemY = currentItem.y;
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        const stageRect = stageBox.getBoundingClientRect();
+        const pctX = (dx / stageRect.width) * 100;
+        const pctY = (dy / stageRect.height) * 100;
+
+        currentItem.x = Math.round((initialItemX + pctX) * 10) / 10;
+        currentItem.y = Math.round((initialItemY + pctY) * 10) / 10;
+
+        document.getElementById('slider-x').value = currentItem.x;
+        document.getElementById('num-x').value = currentItem.x;
+        document.getElementById('slider-y').value = currentItem.y;
+        document.getElementById('num-y').value = currentItem.y;
+
+        updateTransform();
+      });
+
+      window.addEventListener('mouseup', function() {
+        isDragging = false;
+      });
+    }
+
+    function nudge(dx, dy) {
+      currentItem.x = Math.round((currentItem.x + dx) * 10) / 10;
+      currentItem.y = Math.round((currentItem.y + dy) * 10) / 10;
+      document.getElementById('slider-x').value = currentItem.x;
+      document.getElementById('num-x').value = currentItem.x;
+      document.getElementById('slider-y').value = currentItem.y;
+      document.getElementById('num-y').value = currentItem.y;
+      updateTransform();
+    }
+
+    function updateTransform() {
+      currentItem.x = parseFloat(document.getElementById('slider-x').value) || 0;
+      currentItem.y = parseFloat(document.getElementById('slider-y').value) || 0;
+      currentItem.scale = parseFloat(document.getElementById('slider-scale').value) || 65;
+      currentItem.rotation = parseFloat(document.getElementById('slider-rot').value) || 0;
+
+      document.getElementById('num-x').value = currentItem.x;
+      document.getElementById('num-y').value = currentItem.y;
+      document.getElementById('num-scale').value = currentItem.scale;
+      document.getElementById('num-rot').value = currentItem.rotation;
+
+      // Exact matching parent-relative CSS formula:
+      itemHolder.style.left = `calc(50% + ${currentItem.x}%)`;
+      itemHolder.style.top = `calc(50% + ${currentItem.y}%)`;
+      itemHolder.style.width = `${currentItem.scale}%`;
+      itemHolder.style.transform = `translate(-50%, -50%) rotate(${currentItem.rotation}deg)`;
+    }
+
+    function syncSlider(key) {
+      if (key === 'x') document.getElementById('slider-x').value = document.getElementById('num-x').value;
+      if (key === 'y') document.getElementById('slider-y').value = document.getElementById('num-y').value;
+      if (key === 'scale') document.getElementById('slider-scale').value = document.getElementById('num-scale').value;
+      if (key === 'rot') document.getElementById('slider-rot').value = document.getElementById('num-rot').value;
+      updateTransform();
+    }
+
+    function saveItemToGame() {
+      currentItem.name = document.getElementById('item-name').value || 'Özel Kıyafet';
+      currentItem.char = document.getElementById('char-select').value;
+      currentItem.category = document.getElementById('cat-select').value;
+
+      // Save to server if active
+      fetch('/api/save-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentItem)
+      }).then(res => res.json()).then(data => {
+        if(data && data.saved && data.saved.src) {
+          currentItem.src = data.saved.src;
+        }
+      }).catch(() => {});
+
+      let items = getStoredItems();
+      const existingIdx = items.findIndex(i => i.id === currentItem.id);
+      if (existingIdx >= 0) {
+        items[existingIdx] = { ...currentItem };
+      } else {
+        items.push({ ...currentItem });
+      }
+
+      localStorage.setItem('diva_custom_items', JSON.stringify(items));
+      loadCustomItemsList();
+      alert(`✅ "${currentItem.name}" (Scale: %${currentItem.scale}, X: %${currentItem.x}, Y: %${currentItem.y}) kaydedildi!
+index.html sayfasında tam olarak burada gördüğünüz yerde açılacaktır.`);
+    }
+
+    function getStoredItems() {
+      try {
+        return JSON.parse(localStorage.getItem('diva_custom_items') || '[]');
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function loadCustomItemsList() {
+      const items = getStoredItems();
+      const listEl = document.getElementById('custom-items-list');
+      listEl.innerHTML = '';
+
+      if (items.length === 0) {
+        listEl.innerHTML = '<p style="font-size: 11px; color: #888;">Henüz özel kıyafet eklenmedi.</p>';
+        return;
+      }
+
+      items.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <span>${item.char === 'nisa' ? '👩' : '👨'} [${item.category}] ${item.name} (${item.scale}%)</span>
+          <div>
+            <button class="btn btn-secondary" style="padding: 3px 6px; font-size: 10px;" onclick="editItem(${idx})">✏️</button>
+            <button class="btn btn-danger" style="padding: 3px 6px; font-size: 10px;" onclick="deleteItem(${idx})">🗑️</button>
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
+    }
+
+    function editItem(idx) {
+      const items = getStoredItems();
+      const item = items[idx];
+      if (!item) return;
+
+      currentItem = { ...item };
+      document.getElementById('char-select').value = item.char;
+      document.getElementById('cat-select').value = item.category;
+      document.getElementById('item-name').value = item.name;
+      document.getElementById('slider-x').value = item.x || 0;
+      document.getElementById('slider-y').value = item.y || 0;
+      document.getElementById('slider-scale').value = item.scale || 65;
+      document.getElementById('slider-rot').value = item.rotation || 0;
+
+      previewImg.src = item.src;
+      onCharChange();
+      updateTransform();
+    }
+
+    function deleteItem(idx) {
+      let items = getStoredItems();
+      if (confirm(`Bu kıyafeti silmek istediğinize emin misiniz?`)) {
+        items.splice(idx, 1);
+        localStorage.setItem('diva_custom_items', JSON.stringify(items));
+        loadCustomItemsList();
+      }
+    }
+
+    window.onload = init;
+  </script>
+
+<script>
+  // Migrate localStorage Y coordinates for aspect ratio canvas change
+  (function(){
+    try {
+      if(localStorage.getItem('diva_migrated_y') !== 'true') {
+        let items = JSON.parse(localStorage.getItem('diva_custom_items') || '[]');
+        if(items.length > 0) {
+          items.forEach(item => {
+            if(item.y !== undefined) {
+              item.y = Math.round((item.y * (512/312)) * 100) / 100;
+            }
+          });
+          localStorage.setItem('diva_custom_items', JSON.stringify(items));
+        }
+        localStorage.setItem('diva_migrated_y', 'true');
+      }
+    }catch(e){}
+  })();
+</script>
+</body>
+
+</html>
