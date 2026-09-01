@@ -4,7 +4,7 @@
    iPhone with Wi-Fi off. Bump CACHE_VERSION whenever files change so
    returning visitors pick up the update instead of a stale cache. */
 
-const CACHE_VERSION = '20260901-061519';
+const CACHE_VERSION = '20260901-065058';
 const CACHE_NAME = 'diva-dress-makeup-' + CACHE_VERSION;
 
 const CORE_ASSETS = [
@@ -12,6 +12,7 @@ const CORE_ASSETS = [
   './index.html',
   './catalog.js',
   './manifest.json',
+  './placements.json',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
