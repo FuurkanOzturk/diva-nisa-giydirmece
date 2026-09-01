@@ -43,6 +43,9 @@
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
+      overscroll-behavior: none;
+      position: fixed;
+      inset: 0;
       font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       background: #121212;
       touch-action: pan-y;
@@ -53,6 +56,12 @@
     #app {
       width: 100vw;
       height: 100vh;
+      /* iOS Safari's address/toolbar can grow or shrink the visual viewport
+         while 100vh stays fixed to the LARGEST possible height, which used
+         to cut off the bottom of the app behind the toolbar. 100dvh tracks
+         the toolbar in real time on iOS 16+; the 100vh above stays as the
+         fallback for older/other browsers that don't support dvh yet. */
+      height: 100dvh;
       max-width: 480px;
       margin: 0 auto;
       display: flex;
@@ -69,7 +78,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px 8px;
+      /* extra top padding for the iPhone notch/Dynamic Island + status bar —
+         matters most when added to the Home Screen (black-translucent status
+         bar draws the page content starting at y=0) */
+      padding: calc(10px + var(--safe-top)) 14px 8px;
       background: linear-gradient(135deg, #ff4081 0%, #f06292 50%, #ba68c8 100%);
       box-shadow: 0 2px 14px rgba(233,30,140,0.3);
       z-index: 100;
@@ -119,23 +131,6 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.16);
     }
     #app.furkan-mode .char-btn.active { color: var(--furkan-dark); }
-
-    .admin-link-btn {
-      background: rgba(255,255,255,0.9);
-      color: var(--pink-deep);
-      text-decoration: none;
-      font-size: 11px;
-      font-weight: 800;
-      padding: 5px 10px;
-      border-radius: 50px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      transition: var(--transition);
-    }
-    .admin-link-btn:hover { transform: scale(1.05); }
-    #app.furkan-mode .admin-link-btn { color: var(--furkan-dark); }
 
     /* STAGE (flexible — fills remaining space above inventory, minus header/toolbar) */
     #stage {
@@ -320,6 +315,9 @@
       gap: 10px;
       align-content: start;
       -webkit-overflow-scrolling: touch;
+      /* stops a fast swipe at the top/bottom of the grid from "chaining"
+         into a rubber-band bounce of the whole app behind it on iOS */
+      overscroll-behavior-y: contain;
       scrollbar-width: thin;
       scrollbar-color: var(--pink-light) transparent;
     }
@@ -351,7 +349,18 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      border-radius: 6px;
     }
+    /* Every wearable is a full 1024x1024 overlay, so an un-zoomed thumbnail is
+       mostly empty canvas — a pair of shoes ends up 4px tall. Zoom each
+       thumbnail into the body region its category actually occupies. */
+    .item-card .thumb-box img { transition: transform .18s ease; }
+    .thumb-box[data-cat="hair"] img             { transform: scale(2.5); transform-origin: 50% 16%; }
+    .thumb-box[data-cat="top"] img              { transform: scale(1.95); transform-origin: 50% 38%; }
+    .thumb-box[data-cat="bottom"] img           { transform: scale(1.75); transform-origin: 50% 70%; }
+    .thumb-box[data-cat="shoes"] img            { transform: scale(3.2); transform-origin: 50% 95%; }
+    .thumb-box[data-cat^="makeup"] img          { transform: scale(4.2); transform-origin: 50% 17%; }
     .item-card img { width: 100%; height: 100%; object-fit: contain; }
     .item-card svg { width: 100%; height: 100%; object-fit: contain; }
     .item-card .color-dot {
@@ -395,6 +404,10 @@
       box-shadow: 0 0 0 3px rgba(66,165,245,0.18), var(--shadow-furkan);
     }
     #app.furkan-mode .item-card.equipped::after { color: var(--furkan-dark); }
+    /* When 2+ items are stacked in one category, the checkmark becomes the
+       item's position in the stack (1 = bottom / equipped first) instead of
+       a plain ✓, so the layering order toggleItem() built is visible here. */
+    .item-card.equipped[data-order]::after { content: attr(data-order); font-size: 9px; }
 
     @keyframes wearPop {
       0%   { transform: scale(0.95); opacity: 0.7; }
@@ -591,6 +604,58 @@
       text-shadow: 0 2px 6px rgba(0,0,0,0.4);
     }
 
+    /* ---- LOVE TRANSITION -------------------------------------------------
+       A full-screen curtain of scrolling "Furkan ❤︎ Nisa" marquee rows that
+       wipes across the game between screens: once after "Oyuna Başla", and
+       again as the shutter fires on the photo screen. Rows alternate
+       direction and run at different speeds so the whole thing reads as a
+       moving fabric rather than a single sliding banner. */
+    #love-transition {
+      position: fixed; inset: 0; z-index: 99998;
+      display: flex; flex-direction: column; justify-content: center; gap: 6px;
+      background: linear-gradient(160deg, #ff2d6f, #e5308f 45%, #a838d6);
+      overflow: hidden;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity .45s ease, visibility .45s;
+    }
+    #love-transition.show { opacity: 1; visibility: visible; }
+    .love-row {
+      display: flex; width: max-content; white-space: nowrap;
+      font-weight: 900; letter-spacing: 2px; line-height: 1.18;
+      will-change: transform;
+    }
+    .love-row span { padding: 0 22px; }
+    .love-row.solid { color: #fff; text-shadow: 0 3px 16px rgba(0,0,0,.22); }
+    .love-row.ghost { color: transparent; -webkit-text-stroke: 1.4px rgba(255,255,255,.55); }
+    @keyframes loveScrollL { from { transform: translateX(0); }    to { transform: translateX(-50%); } }
+    @keyframes loveScrollR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+    .love-heart {
+      position: absolute; color: #fff; opacity: .5;
+      animation: loveFloat linear infinite; pointer-events: none;
+    }
+    @keyframes loveFloat {
+      0%   { transform: translateY(110%) scale(.5) rotate(-12deg); opacity: 0; }
+      18%  { opacity: .75; }
+      100% { transform: translateY(-130%) scale(1.25) rotate(14deg); opacity: 0; }
+    }
+    #love-badge {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      background: rgba(255,255,255,.94); color: #e0176b;
+      padding: 16px 34px; border-radius: 60px;
+      font-size: 27px; font-weight: 900; white-space: nowrap;
+      box-shadow: 0 16px 42px rgba(0,0,0,.28);
+      animation: popIn .6s cubic-bezier(.175,.885,.32,1.275);
+    }
+    #love-badge .heart-icon { font-size: 25px; }
+
+    /* Same marquee, shrunk into a ribbon for the photo modal. */
+    .love-ribbon {
+      overflow: hidden; border-radius: 10px; margin-bottom: 10px;
+      background: linear-gradient(90deg, #ff2d6f, #b046d8);
+      padding: 7px 0;
+    }
+    .love-ribbon .love-row { font-size: 15px; }
+
     /* ---- GENERIC MODAL SYSTEM ---- */
     #modal-overlay {
       position: fixed; inset: 0; z-index: 9000;
@@ -607,11 +672,14 @@
       border-radius: 24px;
       max-width: 400px; width: 100%;
       max-height: 86vh;
+      max-height: 86dvh;
       overflow-y: auto;
+      overscroll-behavior-y: contain;
       box-shadow: 0 25px 60px rgba(0,0,0,0.4);
       transform: scale(0.9) translateY(10px);
       transition: transform 0.28s cubic-bezier(.34,1.56,.64,1);
       position: relative;
+      padding-bottom: var(--safe-bottom);
     }
     #modal-overlay.open #modal-card { transform: scale(1) translateY(0); }
     .modal-header {
@@ -630,10 +698,11 @@
     .modal-close-btn {
       background: rgba(255,255,255,0.25);
       border: none; color: #fff;
-      width: 28px; height: 28px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       font-size: 15px; font-weight: 900;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
     .modal-body { padding: 18px 20px 22px; }
     .modal-section { margin-bottom: 18px; }
@@ -730,7 +799,11 @@
     .save-look-form { display: flex; gap: 8px; margin-bottom: 14px; }
     .save-look-form input {
       flex: 1; border: 1.5px solid #e0e0e0; border-radius: 10px;
-      padding: 9px 12px; font-size: 12.5px; outline: none;
+      padding: 9px 12px;
+      /* iOS Safari auto-zooms the page when a focused input's font is under
+         16px — keeping this at 16px avoids an unwanted zoom-in every time
+         she types a look name */
+      font-size: 16px; outline: none;
     }
     .save-look-form input:focus { border-color: var(--pink-main, #f06292); }
     .save-look-form button {
@@ -774,11 +847,12 @@
     }
     .toolbar-group { display: flex; gap: 6px; align-items: center; }
     .toolbar-btn {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 36px; height: 36px; border-radius: 50%;
       border: none; background: var(--pink-pale, #fce4ec); color: var(--pink-deep, #e91e8c);
       font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: var(--transition, 0.2s ease);
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
       position: relative;
     }
     .toolbar-btn:active { transform: scale(0.88); }
@@ -794,25 +868,25 @@
     }
     #app.furkan-mode #style-score-pill { background: var(--furkan-pale, #e3f2fd); color: var(--furkan-dark, #0d2e4a); }
 
-    /* ---- SCENE PICKER ---- */
+    /* ---- SCENE PICKER ----
+       Lives inside the ⚙️ Settings modal (see openSettings()) rather than
+       floating over the stage, so the doll's own area stays uncluttered. */
     #scene-picker {
-      position: absolute;
-      bottom: 8px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px;
-      background: rgba(255,255,255,0.75);
-      backdrop-filter: blur(6px);
-      padding: 5px; border-radius: 50px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-      z-index: 20;
+      display: flex; flex-wrap: wrap; gap: 12px;
+    }
+    .scene-dot-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
     .scene-dot {
-      width: 22px; height: 22px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.9);
-      cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.08);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18);
       transition: var(--transition, 0.2s ease);
       flex-shrink: 0;
     }
-    .scene-dot.active { border-color: var(--pink-deep, #e91e8c); transform: scale(1.18); }
+    .scene-dot.active { border-color: var(--pink-deep, #e91e8c); box-shadow: 0 0 0 3px rgba(233,30,140,0.2); transform: scale(1.08); }
+    .scene-dot-label { font-size: 10px; font-weight: 700; color: #757575; text-align: center; max-width: 60px; line-height: 1.2; }
 
     /* ---- ACHIEVEMENT TOAST ---- */
     #toast-stack {
@@ -891,18 +965,79 @@
       screen.appendChild(spark);
     }
 
+    /* Builds the marquee rows once and reuses them for every wipe. */
+    function buildLoveTransition() {
+      const wrap = document.getElementById('love-transition');
+      if(wrap.dataset.built) return wrap;
+      const sizes  = [40, 26, 52, 30, 44, 24, 36];
+      const speeds = [16, 11, 21, 13, 18, 9,  15];
+      for(let r = 0; r < sizes.length; r++) {
+        const row = document.createElement('div');
+        row.className = 'love-row ' + (r % 2 ? 'ghost' : 'solid');
+        row.style.fontSize = sizes[r] + 'px';
+        // The text is duplicated so translating by -50% loops seamlessly.
+        let unit = '';
+        for(let i = 0; i < 8; i++) unit += '<span>Furkan ❤︎ Nisa</span>';
+        row.innerHTML = unit + unit;
+        row.style.animation = `${r % 2 ? 'loveScrollR' : 'loveScrollL'} ${speeds[r]}s linear infinite`;
+        wrap.appendChild(row);
+      }
+      for(let i = 0; i < 16; i++) {
+        const h = document.createElement('div');
+        h.className = 'love-heart';
+        h.textContent = '❤';
+        h.style.left = (Math.random() * 96) + '%';
+        h.style.top = '0';
+        h.style.fontSize = (14 + Math.random() * 30) + 'px';
+        h.style.animationDuration = (3.6 + Math.random() * 3.4) + 's';
+        h.style.animationDelay = (Math.random() * 3) + 's';
+        wrap.appendChild(h);
+      }
+      const badge = document.createElement('div');
+      badge.id = 'love-badge';
+      badge.innerHTML = 'Furkan <span class="heart-icon">❤️</span> Nisa';
+      wrap.appendChild(badge);
+      wrap.dataset.built = '1';
+      return wrap;
+    }
+
+    /* Show the curtain, run `midway` while the screen is covered, then lift it.
+       Returns a promise so callers can chain without nesting timeouts. */
+    function playLoveTransition(midway, holdMs) {
+      const wrap = buildLoveTransition();
+      const badge = wrap.querySelector('#love-badge');
+      if(badge) { badge.style.animation = 'none'; void badge.offsetWidth;
+                  badge.style.animation = 'popIn .6s cubic-bezier(.175,.885,.32,1.275)'; }
+      wrap.classList.add('show');
+      return new Promise(resolve => {
+        setTimeout(() => {
+          try { if(typeof midway === 'function') midway(); } catch(e) { console.error(e); }
+          setTimeout(() => {
+            wrap.classList.remove('show');
+            setTimeout(resolve, 460);
+          }, holdMs == null ? 1500 : holdMs);
+        }, 480);
+      });
+    }
+
     function startGame() {
-      document.getElementById('start-screen').classList.add('start-hidden');
-      if(typeof beginMusic === 'function') beginMusic();
+      const btn = document.querySelector('.start-btn');
+      if(btn) btn.disabled = true;
+      playLoveTransition(() => {
+        document.getElementById('start-screen').classList.add('start-hidden');
+        if(typeof beginMusic === 'function') beginMusic();
+      }, 1700).then(() => { if(btn) btn.disabled = false; });
     }
   </script>
+
+<!-- Love-themed screen wipe, filled in by buildLoveTransition() -->
+<div id="love-transition" aria-hidden="true"></div>
 
 <div id="app">
 
   <header id="header">
     <h1>✨ Diva Dress & Makeup</h1>
     <div class="header-right">
-      <a href="admin.html" class="admin-link-btn" title="Kıyafet Ekle ve Düzenle">⚙️ Admin</a>
       <div id="char-switch">
         <button class="char-btn active" id="btn-nisa" onclick="switchCharacter('nisa')">Nisa</button>
         <button class="char-btn" id="btn-furkan" onclick="switchCharacter('furkan')">Furkan</button>
@@ -934,7 +1069,6 @@
           <!-- Base & Item layers are dynamically rendered here -->
         </div>
       </div>
-    <div id="scene-picker"></div>
     <button id="reset-btn" onclick="resetOutfit()">🔄 Sıfırla</button>
   </section>
 
@@ -968,7 +1102,11 @@
 
 function mergeCustomItems() {
   try {
-    const customItems = JSON.parse(localStorage.getItem('diva_custom_items') || '[]');
+    // Items baked into the build come first, so an item this device has
+    // saved under the same id replaces the shipped one rather than the
+    // other way round.
+    const local = JSON.parse(localStorage.getItem('diva_custom_items') || '[]');
+    const customItems = SHIPPED_DATA.customItems.concat(local);
     customItems.forEach(c => {
       const ch = c.char || 'nisa';
       const cat = c.category || 'top';
@@ -1009,13 +1147,45 @@ function mergeCustomItems() {
 const PLACEMENT_KEY = 'diva_placement_overrides_v1';
 let PLACEMENT_OVERRIDES = {};
 
+/* Positions tuned in admin.html live in that browser's localStorage, which
+   never leaves the machine they were saved on -- so a build published to a
+   web host would show every garment back at its default spot on any other
+   device, a phone above all. deploy_hazirla.bat bakes the current tuning
+   into a placements.json shipped alongside the game; what it contains acts
+   as the baseline here, and anything saved locally on THIS device still
+   wins on top of it, so editing from the admin panel keeps working exactly
+   as it did before. */
+let SHIPPED_DATA = { overrides: {}, customItems: [] };
+
 function loadPlacementOverrides() {
+  let local = {};
   try {
-    PLACEMENT_OVERRIDES = JSON.parse(localStorage.getItem(PLACEMENT_KEY) || '{}');
+    local = JSON.parse(localStorage.getItem(PLACEMENT_KEY) || '{}');
   } catch(e) {
     console.error('Failed to load placement overrides', e);
-    PLACEMENT_OVERRIDES = {};
   }
+  PLACEMENT_OVERRIDES = Object.assign({}, SHIPPED_DATA.overrides, local);
+}
+
+/* Fetched once at startup, after the first render so a slow or missing
+   response can never hold up the opening screen. Simply absent (404) on a
+   plain working copy that has never been exported for deploy, which is not
+   an error: the game just runs on whatever this device has stored. */
+function loadShippedPlacements() {
+  return fetch('placements.json', { cache: 'no-cache' })
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+      if (!data) return;
+      SHIPPED_DATA = {
+        overrides: data.overrides || {},
+        customItems: Array.isArray(data.customItems) ? data.customItems : []
+      };
+      mergeCustomItems();
+      loadPlacementOverrides();
+      renderCharacter();
+      renderGrid();
+    })
+    .catch(() => {});
 }
 
 const TABS = [
@@ -1036,15 +1206,49 @@ const MAKEUP_SUBS = [
 
 /* Z now lives in catalog.js, shared with admin.html. */
 
+/* ---- MULTI-SELECT EQUIP MODEL ----
+   Every wearable category except hair can hold more than one equipped item
+   at once (e.g. a tişört under a hırka), stacked in click order: the item
+   equipped most recently renders last, so it draws on top of earlier picks
+   in the same category — nothing about layering multiple transparent PNGs
+   in one category causes visual conflicts, so there is no need to force a
+   single choice the way hair (one hairstyle at a time) still does.
+   gameState.equipped[cat] is an array of ids for these categories, and a
+   plain id-or-null for 'hair'. catList()/catFilled() read either shape
+   uniformly so the rest of the game never has to branch on it. */
+const MULTI_CATS = ['top', 'bottom', 'shoes', 'accessories',
+  'makeup_lipstick', 'makeup_eyeshadow', 'makeup_blush', 'makeup_eyeliner'];
+
+function defaultEquipped() {
+  const eq = { hair: null };
+  MULTI_CATS.forEach(c => { eq[c] = []; });
+  return eq;
+}
+// Brings an older single-id shape (e.g. a look saved before multi-select
+// shipped) up to the current array shape, so old saved combos still apply.
+function normalizeEquipped(eq) {
+  const out = defaultEquipped();
+  if (!eq) return out;
+  out.hair = eq.hair || null;
+  MULTI_CATS.forEach(c => {
+    const v = eq[c];
+    out[c] = Array.isArray(v) ? v.slice() : (v ? [v] : []);
+  });
+  return out;
+}
+function catList(cat) {
+  const v = gameState.equipped[cat];
+  if (cat === 'hair') return v ? [v] : [];
+  return Array.isArray(v) ? v : (v ? [v] : []);
+}
+function catFilled(cat) { return catList(cat).length > 0; }
+
 let gameState = {
   currentCharacter: 'nisa',
   activeTab: 'hair',
   activeMakeupSub: 'makeup_lipstick',
-  equipped: {
-    hair: null, top: null, bottom: null, shoes: null,
-    makeup_lipstick: null, makeup_eyeshadow: null, makeup_blush: null, makeup_eyeliner: null,
-    accessories: null,
-  }
+  activeStyle: 'hepsi',
+  equipped: defaultEquipped()
 };
 
 function renderCharacter() {
@@ -1065,53 +1269,57 @@ function renderCharacter() {
   ];
 
   layerKeys.forEach(cat => {
-    const id = equipped[cat];
-    if(!id) return;
     const catalogList = CATALOG[ch][cat];
     if(!catalogList) return;
-    const item = catalogList.find(i => i.id === id);
-    if(!item) return;
+    // Rendered in equip order: an item equipped later in the same category
+    // appears later in the DOM, so — with every item in a category sharing
+    // the same Z[cat] — it draws on top of items equipped before it.
+    catList(cat).forEach(id => {
+      const item = catalogList.find(i => i.id === id);
+      if(!item) return;
+      const layerId = 'layer-' + cat + '-' + item.id;
 
-    if(item.isCustom) {
-      // EXACT MATCHING PARENT-RELATIVE CSS CONTAINER
-      const holder = document.createElement('div');
-      holder.className = 'custom-rendered-item';
-      holder.id = 'layer-' + cat;
-      holder.style.zIndex = Z[cat];
-      holder.style.left = `calc(50% + ${item.x}%)`;
-      holder.style.top = `calc(50% + ${item.y}%)`;
-      holder.style.width = `${item.scale}%`;
-      holder.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
-      holder.dataset.x = item.x; holder.dataset.y = item.y;
-      holder.dataset.scale = item.scale; holder.dataset.rotation = item.rotation;
+      if(item.isCustom) {
+        // EXACT MATCHING PARENT-RELATIVE CSS CONTAINER
+        const holder = document.createElement('div');
+        holder.className = 'custom-rendered-item';
+        holder.id = layerId;
+        holder.style.zIndex = Z[cat];
+        holder.style.left = `calc(50% + ${item.x}%)`;
+        holder.style.top = `calc(50% + ${item.y}%)`;
+        holder.style.width = `${item.scale}%`;
+        holder.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
+        holder.dataset.x = item.x; holder.dataset.y = item.y;
+        holder.dataset.scale = item.scale; holder.dataset.rotation = item.rotation;
 
-      const oImg = document.createElement('img');
-      oImg.src = item.src;
-      holder.appendChild(oImg);
-      stageBox.appendChild(holder);
-    } else {
-      const div = document.createElement('div');
-      div.className = 'comp-layer';
-      div.id = 'layer-' + cat;
-      div.style.zIndex = Z[cat];
-
-      const ov = PLACEMENT_OVERRIDES[item.id];
-      if(ov) {
-        const dx = ov.dx || 0, dy = ov.dy || 0, sc = (ov.scale != null ? ov.scale : 1), rot = ov.rot || 0;
-        div.style.transform = `translate(${dx}%, ${dy}%) scale(${sc}) rotate(${rot}deg)`;
-        div.dataset.ovDx = dx; div.dataset.ovDy = dy;
-        div.dataset.ovScale = sc; div.dataset.ovRot = rot;
-      }
-
-      if(item.isImg) {
         const oImg = document.createElement('img');
         oImg.src = item.src;
-        div.appendChild(oImg);
+        holder.appendChild(oImg);
+        stageBox.appendChild(holder);
       } else {
-        div.innerHTML = item.svgFn();
+        const div = document.createElement('div');
+        div.className = 'comp-layer';
+        div.id = layerId;
+        div.style.zIndex = Z[cat];
+
+        const ov = PLACEMENT_OVERRIDES[item.id];
+        if(ov) {
+          const dx = ov.dx || 0, dy = ov.dy || 0, sc = (ov.scale != null ? ov.scale : 1), rot = ov.rot || 0;
+          div.style.transform = `translate(${dx}%, ${dy}%) scale(${sc}) rotate(${rot}deg)`;
+          div.dataset.ovDx = dx; div.dataset.ovDy = dy;
+          div.dataset.ovScale = sc; div.dataset.ovRot = rot;
+        }
+
+        if(item.isImg) {
+          const oImg = document.createElement('img');
+          oImg.src = item.src;
+          div.appendChild(oImg);
+        } else {
+          div.innerHTML = item.svgFn();
+        }
+        stageBox.appendChild(div);
       }
-      stageBox.appendChild(div);
-    }
+    });
   });
 }
 
@@ -1128,12 +1336,26 @@ function renderTabs() {
   });
 }
 
+/* Tabs that carry style-tagged clothing get the Spor / Günlük / Şık / Meslek
+   filter pills; hair and makeup have no styles, so they keep a plain grid. */
+const STYLED_TABS = ['top', 'bottom', 'shoes', 'accessories'];
+
+/* Only offer a filter the current character actually has items for, so e.g.
+   "Meslek" never shows up as an empty shelf. */
+function stylesFor(ch, cat) {
+  const items = (CATALOG[ch] && CATALOG[ch][cat]) || [];
+  const present = new Set(items.map(i => i.style).filter(Boolean));
+  return STYLES.filter(st => st.id === 'hepsi' || present.has(st.id));
+}
+
 function renderSubBar() {
   const subBar = document.getElementById('sub-bar');
-  if(gameState.activeTab === 'makeup') {
+  const { activeTab, currentCharacter: ch } = gameState;
+
+  if(activeTab === 'makeup') {
     subBar.style.display = 'flex';
     subBar.innerHTML = '';
-    const subs = gameState.currentCharacter === 'nisa' ? MAKEUP_SUBS : [{ id:'makeup_blush', label:'🌸 Allık' }];
+    const subs = ch === 'nisa' ? MAKEUP_SUBS : [{ id:'makeup_blush', label:'🌸 Allık' }];
     subs.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'sub-pill' + (gameState.activeMakeupSub === s.id ? ' active' : '');
@@ -1145,9 +1367,29 @@ function renderSubBar() {
       });
       subBar.appendChild(btn);
     });
-  } else {
-    subBar.style.display = 'none';
+    return;
   }
+
+  if(STYLED_TABS.indexOf(activeTab) >= 0) {
+    const avail = stylesFor(ch, activeTab);
+    if(avail.every(st => st.id !== gameState.activeStyle)) gameState.activeStyle = 'hepsi';
+    subBar.style.display = 'flex';
+    subBar.innerHTML = '';
+    avail.forEach(st => {
+      const btn = document.createElement('button');
+      btn.className = 'sub-pill' + (gameState.activeStyle === st.id ? ' active' : '');
+      btn.textContent = st.label;
+      btn.addEventListener('click', () => {
+        gameState.activeStyle = st.id;
+        renderSubBar();
+        renderGrid();
+      });
+      subBar.appendChild(btn);
+    });
+    return;
+  }
+
+  subBar.style.display = 'none';
 }
 
 function renderGrid() {
@@ -1156,15 +1398,37 @@ function renderGrid() {
   const { currentCharacter: ch, activeTab, activeMakeupSub, equipped } = gameState;
 
   const currentCategory = activeTab === 'makeup' ? activeMakeupSub : activeTab;
-  const items = CATALOG[ch][currentCategory] || [];
+  const all = CATALOG[ch][currentCategory] || [];
+  // Custom uploads have no style tag, so they stay visible under every filter.
+  const style = gameState.activeStyle;
+  const items = (STYLED_TABS.indexOf(activeTab) >= 0 && style && style !== 'hepsi')
+    ? all.filter(i => !i.style || i.style === style)
+    : all;
+
+  if(!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'credits-text';
+    empty.style.cssText = 'grid-column:1/-1; text-align:center; padding:24px 8px;';
+    empty.textContent = 'Bu stilde parça yok — başka bir filtre dene ✨';
+    grid.appendChild(empty);
+    return;
+  }
+
+  const equippedList = catList(currentCategory);
 
   items.forEach(item => {
     const card = document.createElement('div');
-    card.className = 'item-card' + (equipped[currentCategory] === item.id ? ' equipped' : '');
+    const order = equippedList.indexOf(item.id);
+    card.className = 'item-card' + (order !== -1 ? ' equipped' : '');
+    // When more than one item is stacked in this category, swap the plain
+    // checkmark for the item's stacking position (1 = bottom, drawn first)
+    // so it's clear at a glance what's layered under what.
+    if (order !== -1 && equippedList.length > 1) card.dataset.order = order + 1;
     card.id = 'item-' + item.id;
 
     const thumbDiv = document.createElement('div');
     thumbDiv.className = 'thumb-box';
+    thumbDiv.dataset.cat = currentCategory;
 
     if(item.color) {
       const dot = document.createElement('div');
@@ -1173,6 +1437,11 @@ function renderGrid() {
       thumbDiv.appendChild(dot);
     } else if(item.thumbFn) {
       thumbDiv.innerHTML = item.thumbFn();
+      if(item.zoom) {
+        const im = thumbDiv.querySelector('img');
+        if(im) im.style.transform = `scale(${item.zoom[0]})`,
+               im.style.transformOrigin = `50% ${item.zoom[1]}%`;
+      }
     }
 
     card.appendChild(thumbDiv);
@@ -1195,14 +1464,35 @@ function selectTab(id) {
 }
 
 function toggleItem(cat, id) {
-  const wasEquipped = gameState.equipped[cat] === id;
-  gameState.equipped[cat] = wasEquipped ? null : id;
+  let wasEquipped;
+  if (cat === 'hair') {
+    wasEquipped = gameState.equipped.hair === id;
+    gameState.equipped.hair = wasEquipped ? null : id;
+  } else {
+    const arr = catList(cat);
+    const idx = arr.indexOf(id);
+    wasEquipped = idx !== -1;
+    if (wasEquipped) arr.splice(idx, 1); else arr.push(id);
+    gameState.equipped[cat] = arr;
+  }
   renderCharacter();
-  const layer = document.getElementById('layer-' + cat);
+  const layer = document.getElementById('layer-' + cat + '-' + id);
   if(layer) {
-    layer.classList.remove('wear-anim');
-    void layer.offsetWidth;
-    layer.classList.add('wear-anim');
+    // The pop animation must land on the INNER image, never on the layer
+    // element itself. wearPop's last keyframe is `transform: scale(1)` and it
+    // runs with `forwards`, and an animation's transform outranks an inline
+    // one in the cascade -- so animating the layer would permanently wipe the
+    // transform the layer carries: the admin placement override
+    // (translate/scale/rotate from PLACEMENT_OVERRIDES) on catalog items, and
+    // the translate(-50%,-50%) centering on custom uploads. The item would
+    // snap back to an unadjusted spot the moment it was clicked, which is
+    // exactly what made saved admin positions look like they never applied.
+    // Animating the child gives the identical visual pop (it fills the layer)
+    // and leaves the layer's own transform alone.
+    const animTarget = layer.querySelector('img, svg') || layer;
+    animTarget.classList.remove('wear-anim');
+    void layer.offsetWidth; // force reflow so re-adding restarts the animation
+    animTarget.classList.add('wear-anim');
   }
   renderGrid();
   if(typeof playSfx === 'function') playSfx(wasEquipped ? 'unequip' : 'equip');
@@ -1212,11 +1502,7 @@ function toggleItem(cat, id) {
 function switchCharacter(ch) {
   if(gameState.currentCharacter === ch) return;
   gameState.currentCharacter = ch;
-  gameState.equipped = {
-    hair: null, top: null, bottom: null, shoes: null,
-    makeup_lipstick: null, makeup_eyeshadow: null, makeup_blush: null, makeup_eyeliner: null,
-    accessories: null,
-  };
+  gameState.equipped = defaultEquipped();
   gameState.activeTab = 'hair';
   gameState.activeMakeupSub = 'makeup_lipstick';
 
@@ -1235,11 +1521,7 @@ function switchCharacter(ch) {
 }
 
 function resetOutfit() {
-  gameState.equipped = {
-    hair: null, top: null, bottom: null, shoes: null,
-    makeup_lipstick: null, makeup_eyeshadow: null, makeup_blush: null, makeup_eyeliner: null,
-    accessories: null,
-  };
+  gameState.equipped = defaultEquipped();
   renderCharacter();
   renderGrid();
   if(typeof onOutfitReset === 'function') onOutfitReset();
@@ -1254,6 +1536,26 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSubBar();
   renderGrid();
   if(typeof initExtras === 'function') initExtras();
+  // Deliberately last and deliberately not awaited: the game is already
+  // interactive by now, and this only ever adds to what is on screen.
+  loadShippedPlacements();
+});
+
+/* admin.html is normally opened in its own tab alongside this one (start.bat
+   launches both at once), so a position saved there would otherwise only
+   show up here after a manual reload -- the 'storage' event fires in every
+   OTHER same-origin tab the moment admin.html writes to localStorage, which
+   lets the game tab pick the change up live instead. It never fires in the
+   tab that made the change, so this only ever triggers from admin -> game. */
+window.addEventListener('storage', (e) => {
+  if(e.key === PLACEMENT_KEY) {
+    loadPlacementOverrides();
+    renderCharacter();
+  } else if(e.key === 'diva_custom_items') {
+    mergeCustomItems();
+    renderCharacter();
+    renderGrid();
+  }
 });
 </script>
 
@@ -1446,6 +1748,10 @@ function openSettings() {
   const s = AudioEngine.settings;
   const html = `
     <div class="modal-section">
+      <div class="modal-section-title">🎨 Sahne / Arka Plan</div>
+      <div id="scene-picker"></div>
+    </div>
+    <div class="modal-section">
       <div class="modal-section-title">Ses</div>
       <div class="settings-row">
         <span class="settings-label">🎵 Müzik Sesi</span>
@@ -1456,7 +1762,7 @@ function openSettings() {
         <input type="range" min="0" max="100" value="${Math.round(s.sfxVol*100)}" oninput="setSfxVol(this.value)">
       </div>
       <div class="settings-row">
-        <span class="settings-label">🔇 Tüm Sesler</span>
+        <span class="settings-label">🔇 Tüm Sesleri Kapat</span>
         <button class="toggle-switch ${s.muted?'on':''}" id="mute-toggle-switch" onclick="toggleMute()"></button>
       </div>
     </div>
@@ -1470,6 +1776,8 @@ function openSettings() {
     </div>
   `;
   openModal('⚙️ Ayarlar', html);
+  // #scene-picker only exists once the modal's HTML above is in the DOM.
+  renderScenePicker();
 }
 
 function confirmResetData() {
@@ -1494,8 +1802,8 @@ function doResetData() {
 function openHowTo() {
   const html = `
     <div class="howto-step"><div class="howto-num">1</div><div class="howto-text">Üstteki <b>Nisa / Furkan</b> düğmesiyle karakterini seç.</div></div>
-    <div class="howto-step"><div class="howto-num">2</div><div class="howto-text">Alttaki sekmelerden <b>saç, kıyafet, alt giyim, ayakkabı, makyaj</b> kategorisini seç ve bir görsele dokunarak giydir.</div></div>
-    <div class="howto-step"><div class="howto-num">3</div><div class="howto-text">🎲 <b>Şaşırt</b> ile rastgele kombin dene, sahnenin altındaki renkli noktalarla arka planı değiştir.</div></div>
+    <div class="howto-step"><div class="howto-num">2</div><div class="howto-text">Alttaki sekmelerden <b>saç, kıyafet, alt giyim, ayakkabı, aksesuar, makyaj</b> kategorisini seç ve bir görsele dokunarak giydir. Aynı kategoride birden fazla parçayı üst üste giyebilirsin — <b>en son dokunduğun en üstte</b> görünür.</div></div>
+    <div class="howto-step"><div class="howto-num">3</div><div class="howto-text">🎲 <b>Şaşırt</b> ile rastgele kombin dene, ⚙️ <b>Ayarlar</b>'dan arka planı ve sesi değiştir.</div></div>
     <div class="howto-step"><div class="howto-num">4</div><div class="howto-text">🖼️ ile beğendiğin kombinleri <b>kaydet</b> ve sonra tekrar giy, 📸 ile fotoğrafını çekip bilgisayarına indir.</div></div>
     <div class="howto-step"><div class="howto-num">5</div><div class="howto-text">🏆 rozet ikonundan başarılarını takip et, üstteki çubuk o anki kombinin ne kadar tamamlandığını gösterir.</div></div>
   `;
@@ -1559,16 +1867,25 @@ const SCENES = [
 let currentScene = 0;
 
 function renderScenePicker() {
+  // Only rendered while the Settings modal is open (that's where its markup
+  // now lives); called elsewhere too, but finds nothing and no-ops then.
   const wrap = document.getElementById('scene-picker');
   if (!wrap) return;
   wrap.innerHTML = '';
   SCENES.forEach((sc, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'scene-dot-wrap';
+    btn.onclick = () => applyScene(i);
     const dot = document.createElement('div');
     dot.className = 'scene-dot' + (i === currentScene ? ' active' : '');
     dot.style.background = sc.dot;
     dot.title = sc.name;
-    dot.onclick = () => applyScene(i);
-    wrap.appendChild(dot);
+    const label = document.createElement('span');
+    label.className = 'scene-dot-label';
+    label.textContent = sc.name;
+    btn.appendChild(dot);
+    btn.appendChild(label);
+    wrap.appendChild(btn);
   });
 }
 function applyScene(i) {
@@ -1586,13 +1903,16 @@ function randomOutfit() {
   const ch = gameState.currentCharacter;
   const cats = ['hair','top','bottom','shoes','makeup_lipstick','makeup_eyeshadow','makeup_blush','makeup_eyeliner'];
   cats.forEach(cat => {
+    const empty = cat === 'hair' ? null : [];
     const list = CATALOG[ch][cat];
-    if (!list || !list.length) { gameState.equipped[cat] = null; return; }
+    if (!list || !list.length) { gameState.equipped[cat] = empty; return; }
     if ((cat === 'makeup_eyeliner' || cat === 'makeup_eyeshadow') && Math.random() < 0.3) {
-      gameState.equipped[cat] = null; return;
+      gameState.equipped[cat] = empty; return;
     }
     const pick = list[Math.floor(Math.random() * list.length)];
-    gameState.equipped[cat] = pick.id;
+    // Şaşırt always picks one fresh item per category rather than stacking
+    // onto whatever was already layered there.
+    gameState.equipped[cat] = cat === 'hair' ? pick.id : [pick.id];
     stats.itemsWorn.add(ch + '|' + cat + '|' + pick.id);
   });
   stats.charsUsed.add(ch);
@@ -1645,8 +1965,7 @@ const BADGES = [
 ];
 
 function checkFullOutfitTransition() {
-  const eq = gameState.equipped;
-  const complete = !!(eq.hair && eq.top && eq.shoes);
+  const complete = catFilled('hair') && catFilled('top') && catFilled('shoes');
   if (complete && !wasFullOutfit) {
     stats.fullOutfits++;
     saveStats();
@@ -1686,7 +2005,7 @@ function updateStyleMeter() {
   const cats = ch === 'nisa'
     ? ['hair','top','bottom','shoes','makeup_lipstick','makeup_eyeshadow','makeup_blush','makeup_eyeliner']
     : ['hair','top','bottom','shoes','makeup_blush'];
-  const filled = cats.filter(c => gameState.equipped[c]).length;
+  const filled = cats.filter(c => catFilled(c)).length;
   const pct = Math.round((filled / cats.length) * 100);
   const fill = document.getElementById('style-meter-fill');
   const label = document.getElementById('style-meter-label');
@@ -1777,8 +2096,27 @@ function makeThumbDataUrl(size) {
 }
 
 function openPhotoModal() {
+  // The shutter gets the same love curtain as the intro: the photo is built
+  // and the modal opened while the screen is covered, so the reveal lands
+  // right as the marquee lifts.
+  if(typeof playLoveTransition === 'function') {
+    playLoveTransition(() => showPhotoModal(), 1300);
+  } else {
+    showPhotoModal();
+  }
+}
+
+function loveRibbonHTML() {
+  let unit = '';
+  for(let i = 0; i < 8; i++) unit += '<span>Furkan ❤︎ Nisa</span>';
+  return `<div class="love-ribbon"><div class="love-row solid"
+            style="animation: loveScrollL 14s linear infinite;">${unit + unit}</div></div>`;
+}
+
+function showPhotoModal() {
   const canvas = renderDollToCanvas(640);
   const html = `
+    ${loveRibbonHTML()}
     <div id="photo-canvas-wrap"></div>
     <button class="modal-action-btn primary" id="photo-download-btn">💾 Fotoğrafı İndir</button>
     <p class="credits-text" style="margin-top:10px; text-align:center;">İndirme çalışmazsa oyunu <b>start.bat</b> ile başlatıp tekrar dene.</p>
@@ -1793,15 +2131,51 @@ function openPhotoModal() {
 }
 
 function downloadCanvas(canvas) {
+  const filename = `diva_${gameState.currentCharacter}_${Date.now()}.png`;
   try {
-    canvas.toBlob(blob => {
+    canvas.toBlob(async blob => {
       if (!blob) { showToast('⚠️ İndirilemedi — start.bat ile açmayı dene'); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `diva_${gameState.currentCharacter}_${Date.now()}.png`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
-      showToast('📸 Fotoğraf indirildi!');
+
+      // On iPhone — especially once the game is added to the Home Screen for
+      // real offline play, which is exactly the setup this game is built
+      // for — a plain <a download> link usually can't save an image at all:
+      // there's no browser chrome to catch the download. The share sheet
+      // (Web Share API with a real file) is what reliably gets the photo
+      // into Photos there, so try it first and only fall back to the
+      // classic download link where sharing isn't available.
+      let shared = false;
+      if (navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Diva Dress & Makeup' });
+            showToast('📸 Fotoğraf paylaşıldı!');
+            shared = true;
+          }
+        } catch (shareErr) {
+          // user cancelling the share sheet isn't an error — just stop here
+          if (shareErr && shareErr.name === 'AbortError') { shared = true; }
+        }
+      }
+      if (shared) return;
+
+      try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        showToast('📸 Fotoğraf indirildi!');
+      } catch (e2) {
+        // last-resort fallback: open the photo full-screen so it can be
+        // saved with a long-press → "Fotoğrafları Kaydet"
+        try {
+          window.open(canvas.toDataURL('image/png'), '_blank');
+          showToast('📸 Görseli basılı tutup kaydedebilirsin');
+        } catch (e3) {
+          showToast('⚠️ İndirilemedi — start.bat ile açmayı dene');
+        }
+      }
     });
   } catch (e) {
     showToast('⚠️ İndirilemedi — start.bat ile açmayı dene');
@@ -1836,7 +2210,7 @@ function saveCurrentLook() {
   const name = ((nameInput && nameInput.value) || 'Kombinim').trim().slice(0, 20) || 'Kombinim';
   const looks = loadLooks();
   const thumb = makeThumbDataUrl(220);
-  looks.unshift({ id: 'look_' + Date.now(), name, char: gameState.currentCharacter, equipped: { ...gameState.equipped }, thumb });
+  looks.unshift({ id: 'look_' + Date.now(), name, char: gameState.currentCharacter, equipped: normalizeEquipped(gameState.equipped), thumb });
   if (looks.length > 30) looks.length = 30;
   persistLooks(looks);
   stats.looksSaved++; saveStats();
@@ -1852,7 +2226,7 @@ function applyLook(id) {
   const look = looks.find(l => l.id === id);
   if (!look) return;
   if (gameState.currentCharacter !== look.char) switchCharacter(look.char);
-  gameState.equipped = { ...gameState.equipped, ...look.equipped };
+  gameState.equipped = normalizeEquipped(look.equipped);
   renderCharacter();
   renderGrid();
   updateStyleMeter();
